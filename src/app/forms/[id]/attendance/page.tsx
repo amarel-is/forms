@@ -68,11 +68,21 @@ export default async function AttendancePage({ params, searchParams }: Props) {
 
   const form = rowToForm(formRow)
 
-  // Date range
-  const selectedDate = dateParam ?? new Date().toISOString().split("T")[0]
-  const dayStart = `${selectedDate}T00:00:00.000Z`
-  const dayEnd = `${selectedDate}T23:59:59.999Z`
-  const isToday = selectedDate === new Date().toISOString().split("T")[0]
+  // Date range — always use Israel timezone (Asia/Jerusalem)
+  const IL_TZ = "Asia/Jerusalem"
+  const todayIL = new Date().toLocaleDateString("en-CA", { timeZone: IL_TZ }) // YYYY-MM-DD
+  const selectedDate = dateParam ?? todayIL
+  const isToday = selectedDate === todayIL
+
+  // Convert the selected Israel date to UTC boundaries for the DB query
+  // Use noon of that day (UTC) as a reference to correctly compute the Israel offset (handles DST)
+  const refUtcNoon = new Date(`${selectedDate}T12:00:00Z`)
+  const israelNoon = new Date(refUtcNoon.toLocaleString("en-US", { timeZone: IL_TZ }))
+  const utcNoon = new Date(refUtcNoon.toLocaleString("en-US", { timeZone: "UTC" }))
+  const israelOffsetMs = israelNoon.getTime() - utcNoon.getTime() // Israel is ahead of UTC
+  const dayStartMs = new Date(`${selectedDate}T00:00:00Z`).getTime() - israelOffsetMs
+  const dayStart = new Date(dayStartMs).toISOString()
+  const dayEnd = new Date(dayStartMs + 24 * 60 * 60 * 1000 - 1).toISOString()
 
   // Responses for the selected date
   const { data: dayRows } = await sb
@@ -189,6 +199,7 @@ export default async function AttendancePage({ params, searchParams }: Props) {
                       {new Date(p.submitted_at).toLocaleTimeString("he-IL", {
                         hour: "2-digit",
                         minute: "2-digit",
+                        timeZone: "Asia/Jerusalem",
                       })}
                     </div>
                   </div>
@@ -256,6 +267,7 @@ export default async function AttendancePage({ params, searchParams }: Props) {
                           {new Date(r.submitted_at).toLocaleTimeString("he-IL", {
                             hour: "2-digit",
                             minute: "2-digit",
+                            timeZone: "Asia/Jerusalem",
                           })}
                         </TableCell>
                         {nameField && (
