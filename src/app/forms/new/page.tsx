@@ -4,7 +4,7 @@ import { FormBuilder } from "@/components/form-builder/form-builder"
 import { createClient } from "@/lib/supabase/server"
 
 export const metadata: Metadata = {
-  title: "New Form",
+  title: "טופס חדש",
 }
 
 export default async function NewFormPage() {

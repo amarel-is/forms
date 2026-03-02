@@ -103,7 +103,20 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
-    "SF Pro Text", system-ui, sans-serif;
+  font-family: var(--font-google-sans, "Google Sans"), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* RTL-aware input text alignment */
+input,
+textarea,
+select {
+  text-align: start;
+}
+
+/* Ensure placeholder text is correctly aligned in RTL */
+input::placeholder,
+textarea::placeholder {
+  text-align: start;
 }

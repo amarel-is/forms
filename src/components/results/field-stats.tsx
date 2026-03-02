@@ -11,23 +11,13 @@ export function FieldStats({ fields, responses }: FieldStatsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {fields.map((field) => (
-        <FieldStatCard
-          key={field.id}
-          field={field}
-          responses={responses}
-        />
+        <FieldStatCard key={field.id} field={field} responses={responses} />
       ))}
     </div>
   )
 }
 
-function FieldStatCard({
-  field,
-  responses,
-}: {
-  field: FieldConfig
-  responses: FormResponse[]
-}) {
+function FieldStatCard({ field, responses }: { field: FieldConfig; responses: FormResponse[] }) {
   const total = responses.length
 
   if (field.type === "text") {
@@ -35,17 +25,16 @@ function FieldStatCard({
       const val = r.data[field.id]
       return val && (val as string).trim().length > 0
     }).length
-
     const pct = total > 0 ? Math.round((answered / total) * 100) : 0
 
     return (
       <div className="bg-white rounded-2xl border border-neutral-200 p-5">
         <p className="text-xs text-neutral-500 font-medium uppercase tracking-wide mb-3">
-          {field.label || "Untitled"}
+          {field.label || "ללא שם"}
         </p>
         <div className="flex items-end gap-2 mb-3">
           <span className="text-3xl font-bold text-neutral-900">{answered}</span>
-          <span className="text-sm text-neutral-400 mb-1">/ {total} answered</span>
+          <span className="text-sm text-neutral-400 mb-1">/ {total} ענו</span>
         </div>
         <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
           <div
@@ -53,7 +42,7 @@ function FieldStatCard({
             style={{ width: `${pct}%` }}
           />
         </div>
-        <p className="text-xs text-neutral-400 mt-1.5">{pct}% response rate</p>
+        <p className="text-xs text-neutral-400 mt-1.5">שיעור תגובה {pct}%</p>
       </div>
     )
   }
@@ -65,9 +54,7 @@ function FieldStatCard({
       const val = r.data[field.id]
       if (!val) return
       if (Array.isArray(val)) {
-        val.forEach((v) => {
-          countMap[v] = (countMap[v] ?? 0) + 1
-        })
+        val.forEach((v) => { countMap[v] = (countMap[v] ?? 0) + 1 })
       } else {
         if (val) countMap[val] = (countMap[val] ?? 0) + 1
       }
@@ -79,7 +66,7 @@ function FieldStatCard({
     return (
       <div className="bg-white rounded-2xl border border-neutral-200 p-5">
         <p className="text-xs text-neutral-500 font-medium uppercase tracking-wide mb-4">
-          {field.label || "Untitled"}
+          {field.label || "ללא שם"}
         </p>
         <div className="space-y-3">
           {options.map((opt) => {
@@ -90,10 +77,8 @@ function FieldStatCard({
             return (
               <div key={opt}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-neutral-700 truncate max-w-[70%]">
-                    {opt}
-                  </span>
-                  <span className="text-xs text-neutral-400 shrink-0 ml-2">
+                  <span className="text-sm text-neutral-700 truncate max-w-[70%]">{opt}</span>
+                  <span className="text-xs text-neutral-400 shrink-0 me-2">
                     {count} ({pct}%)
                   </span>
                 </div>
@@ -106,9 +91,8 @@ function FieldStatCard({
               </div>
             )
           })}
-
           {options.length === 0 && (
-            <p className="text-xs text-neutral-400">No options defined</p>
+            <p className="text-xs text-neutral-400">לא הוגדרו אפשרויות</p>
           )}
         </div>
       </div>

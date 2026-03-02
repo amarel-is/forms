@@ -7,13 +7,13 @@ export default function NotFound() {
       <div className="text-center max-w-sm">
         <div className="text-6xl font-bold text-neutral-200 mb-4">404</div>
         <h1 className="text-xl font-semibold text-neutral-800 mb-2">
-          Page not found
+          הדף לא נמצא
         </h1>
         <p className="text-sm text-neutral-500 mb-6">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
+          הדף שחיפשת אינו קיים או הועבר.
         </p>
         <Button asChild className="rounded-xl">
-          <Link href="/dashboard">Go to dashboard</Link>
+          <Link href="/dashboard">חזור ללוח הבקרה</Link>
         </Button>
       </div>
     </div>

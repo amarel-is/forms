@@ -11,12 +11,7 @@ interface MultiSelectFieldProps {
   error?: string
 }
 
-export function MultiSelectField({
-  field,
-  value,
-  onChange,
-  error,
-}: MultiSelectFieldProps) {
+export function MultiSelectField({ field, value, onChange, error }: MultiSelectFieldProps) {
   function toggle(opt: string) {
     if (value.includes(opt)) {
       onChange(value.filter((v) => v !== opt))
@@ -29,7 +24,7 @@ export function MultiSelectField({
     <div className="space-y-2">
       <Label className="text-sm font-medium text-neutral-800">
         {field.label}
-        {field.required && <span className="text-red-500 ml-1">*</span>}
+        {field.required && <span className="text-red-500 ms-1">*</span>}
       </Label>
 
       <div className="space-y-2">

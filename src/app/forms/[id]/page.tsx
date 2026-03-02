@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .single()
 
   return {
-    title: row?.name ? `Edit — ${row.name}` : "Edit Form",
+    title: row?.name ? `עריכה — ${row.name}` : "עריכת טופס",
   }
 }
 

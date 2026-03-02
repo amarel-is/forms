@@ -2,15 +2,8 @@
 
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import {
-  GripVertical,
-  Type,
-  ChevronDown,
-  ListChecks,
-  Trash2,
-} from "lucide-react"
+import { GripVertical, Type, ChevronDown, ListChecks, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import type { FieldConfig } from "@/lib/types"
 
 const TYPE_ICON = {
@@ -20,9 +13,9 @@ const TYPE_ICON = {
 }
 
 const TYPE_LABEL = {
-  text: "Text",
-  dropdown: "Dropdown",
-  multiselect: "Multi-select",
+  text: "טקסט",
+  dropdown: "רשימה נפתחת",
+  multiselect: "בחירה מרובה",
 }
 
 interface FieldItemProps {
@@ -32,12 +25,7 @@ interface FieldItemProps {
   onDelete: () => void
 }
 
-export function FieldItem({
-  field,
-  isSelected,
-  onSelect,
-  onDelete,
-}: FieldItemProps) {
+export function FieldItem({ field, isSelected, onSelect, onDelete }: FieldItemProps) {
   const {
     attributes,
     listeners,
@@ -75,36 +63,28 @@ export function FieldItem({
       </button>
 
       {/* Icon */}
-      <span
-        className={`shrink-0 ${isSelected ? "text-neutral-700" : "text-neutral-400"}`}
-      >
+      <span className={`shrink-0 ${isSelected ? "text-neutral-700" : "text-neutral-400"}`}>
         {TYPE_ICON[field.type]}
       </span>
 
       {/* Label */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-neutral-800 truncate">
-          {field.label || "Untitled field"}
+          {field.label || "שדה ללא שם"}
         </p>
         <p className="text-xs text-neutral-400">{TYPE_LABEL[field.type]}</p>
       </div>
 
       {/* Required badge */}
       {field.required && (
-        <Badge
-          variant="secondary"
-          className="text-xs px-1.5 py-0 rounded-md shrink-0"
-        >
-          req
+        <Badge variant="secondary" className="text-xs px-1.5 py-0 rounded-md shrink-0">
+          חובה
         </Badge>
       )}
 
       {/* Delete */}
       <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onDelete()
-        }}
+        onClick={(e) => { e.stopPropagation(); onDelete() }}
         className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all"
       >
         <Trash2 className="h-3.5 w-3.5" />

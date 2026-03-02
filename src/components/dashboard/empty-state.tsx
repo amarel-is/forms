@@ -19,15 +19,15 @@ export function EmptyState() {
         </svg>
       </div>
       <h3 className="text-lg font-semibold text-neutral-800 mb-1.5">
-        No forms yet
+        עדיין אין לך טפסים
       </h3>
       <p className="text-sm text-neutral-500 max-w-xs mb-6">
-        Create your first form to start collecting responses from your audience.
+        צור את הטופס הראשון שלך כדי להתחיל לאסוף תגובות.
       </p>
       <Button asChild className="rounded-xl gap-2 h-10">
         <Link href="/forms/new">
           <Plus className="h-4 w-4" />
-          Create form
+          צור טופס
         </Link>
       </Button>
     </div>

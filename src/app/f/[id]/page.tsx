@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .single()
 
   return {
-    title: row?.name ?? "Form",
+    title: row?.name ?? "טופס",
     description: row?.description ?? undefined,
   }
 }
@@ -53,8 +53,8 @@ export default async function PublicFillPage({ params }: Props) {
               />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-neutral-800 mb-1">Form not available</h2>
-          <p className="text-sm text-neutral-500">This form is not currently accepting responses.</p>
+          <h2 className="text-lg font-semibold text-neutral-800 mb-1">הטופס אינו זמין</h2>
+          <p className="text-sm text-neutral-500">טופס זה אינו מקבל תגובות כרגע.</p>
         </div>
       </div>
     )
@@ -73,7 +73,7 @@ export default async function PublicFillPage({ params }: Props) {
         <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6">
           {form.fields.length === 0 ? (
             <p className="text-center text-neutral-400 text-sm py-8">
-              This form has no fields yet.
+              לטופס זה אין שדות עדיין.
             </p>
           ) : (
             <FormRenderer form={form} />
@@ -81,7 +81,7 @@ export default async function PublicFillPage({ params }: Props) {
         </div>
 
         <p className="text-center text-xs text-neutral-400 mt-6">
-          Powered by{" "}
+          מופעל על ידי{" "}
           <span className="font-medium text-neutral-600">FormCraft</span>
         </p>
       </div>

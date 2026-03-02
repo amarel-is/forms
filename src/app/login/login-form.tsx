@@ -29,7 +29,7 @@ export default function LoginForm() {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
-        toast.success("Account created! Check your email to verify.")
+        toast.success("חשבון נוצר! בדוק את האימייל שלך לאימות.")
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -40,7 +40,8 @@ export default function LoginForm() {
         router.refresh()
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Something went wrong"
+      const message =
+        err instanceof Error ? err.message : "אירעה שגיאה, נסה שוב"
       toast.error(message)
     } finally {
       setLoading(false)
@@ -53,7 +54,7 @@ export default function LoginForm() {
         <CardContent className="pt-6 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-sm font-medium">
-              Email
+              אימייל
             </Label>
             <Input
               id="email"
@@ -64,25 +65,25 @@ export default function LoginForm() {
               required
               autoComplete="email"
               className="h-10 rounded-xl"
+              dir="ltr"
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="password" className="text-sm font-medium">
-              Password
+              סיסמה
             </Label>
             <Input
               id="password"
               type="password"
-              placeholder={mode === "signup" ? "Min. 6 characters" : "••••••••"}
+              placeholder={mode === "signup" ? "לפחות 6 תווים" : "••••••••"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              autoComplete={
-                mode === "signup" ? "new-password" : "current-password"
-              }
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
               className="h-10 rounded-xl"
+              dir="ltr"
             />
           </div>
 
@@ -94,9 +95,9 @@ export default function LoginForm() {
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : mode === "signin" ? (
-              "Sign in"
+              "כניסה"
             ) : (
-              "Create account"
+              "יצירת חשבון"
             )}
           </Button>
         </CardContent>
@@ -105,24 +106,24 @@ export default function LoginForm() {
           <p className="text-sm text-neutral-500">
             {mode === "signin" ? (
               <>
-                No account?{" "}
+                אין לך חשבון?{" "}
                 <button
                   type="button"
                   onClick={() => setMode("signup")}
                   className="text-neutral-900 font-medium hover:underline"
                 >
-                  Sign up
+                  הרשמה
                 </button>
               </>
             ) : (
               <>
-                Already have an account?{" "}
+                כבר יש לך חשבון?{" "}
                 <button
                   type="button"
                   onClick={() => setMode("signin")}
                   className="text-neutral-900 font-medium hover:underline"
                 >
-                  Sign in
+                  כניסה
                 </button>
               </>
             )}

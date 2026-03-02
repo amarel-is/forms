@@ -47,11 +47,11 @@ export function FormRenderer({ form }: FormRendererProps) {
       const val = values[f.id]
       if (f.type === "multiselect") {
         if ((val as string[]).length === 0) {
-          newErrors[f.id] = "Please select at least one option"
+          newErrors[f.id] = "אנא בחר לפחות אפשרות אחת"
         }
       } else {
         if (!val || (val as string).trim() === "") {
-          newErrors[f.id] = "This field is required"
+          newErrors[f.id] = "שדה זה הוא חובה"
         }
       }
     })
@@ -72,7 +72,7 @@ export function FormRenderer({ form }: FormRendererProps) {
         setSubmitted(true)
       }
     } catch {
-      toast.error("Something went wrong. Please try again.")
+      toast.error("אירעה שגיאה. אנא נסה שוב.")
     } finally {
       setSubmitting(false)
     }
@@ -85,11 +85,9 @@ export function FormRenderer({ form }: FormRendererProps) {
           <CheckCircle2 className="h-8 w-8 text-neutral-700" />
         </div>
         <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-          {form.settings?.submit_message ?? "Thank you!"}
+          {form.settings?.submit_message ?? "תודה!"}
         </h2>
-        <p className="text-sm text-neutral-500">
-          Your response has been recorded.
-        </p>
+        <p className="text-sm text-neutral-500">תגובתך נקלטה בהצלחה.</p>
       </div>
     )
   }
@@ -106,16 +104,8 @@ export function FormRenderer({ form }: FormRendererProps) {
         />
       ))}
 
-      <Button
-        type="submit"
-        className="w-full h-11 rounded-xl font-medium"
-        disabled={submitting}
-      >
-        {submitting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          "Submit"
-        )}
+      <Button type="submit" className="w-full h-11 rounded-xl font-medium" disabled={submitting}>
+        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "שלח"}
       </Button>
     </form>
   )

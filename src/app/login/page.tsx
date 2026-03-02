@@ -4,7 +4,7 @@ import LoginForm from "./login-form"
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "Sign In",
+  title: "כניסה",
 }
 
 export default function LoginPage() {
@@ -21,40 +21,16 @@ export default function LoginPage() {
               fill="none"
               className="text-white"
             >
-              <rect
-                x="3"
-                y="3"
-                width="18"
-                height="4"
-                rx="1"
-                fill="currentColor"
-                opacity="0.9"
-              />
-              <rect
-                x="3"
-                y="10"
-                width="12"
-                height="4"
-                rx="1"
-                fill="currentColor"
-                opacity="0.7"
-              />
-              <rect
-                x="3"
-                y="17"
-                width="8"
-                height="4"
-                rx="1"
-                fill="currentColor"
-                opacity="0.5"
-              />
+              <rect x="3" y="3" width="18" height="4" rx="1" fill="currentColor" opacity="0.9" />
+              <rect x="3" y="10" width="12" height="4" rx="1" fill="currentColor" opacity="0.7" />
+              <rect x="3" y="17" width="8" height="4" rx="1" fill="currentColor" opacity="0.5" />
             </svg>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
             FormCraft
           </h1>
           <p className="text-sm text-neutral-500 mt-1">
-            Build beautiful forms in minutes
+            בנה טפסים יפים תוך דקות
           </p>
         </div>
 

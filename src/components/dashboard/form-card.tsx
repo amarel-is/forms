@@ -43,18 +43,13 @@ export function FormCard({ form, responseCount }: FormCardProps) {
   const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState(false)
 
-  const fillUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/f/${form.id}`
-      : `/f/${form.id}`
-
   async function handleDelete() {
     setDeleting(true)
     const result = await deleteForm(form.id)
     if (result.error) {
       toast.error(result.error)
     } else {
-      toast.success("Form deleted")
+      toast.success("הטופס נמחק")
     }
     setDeleting(false)
     setDeleteOpen(false)
@@ -62,15 +57,11 @@ export function FormCard({ form, responseCount }: FormCardProps) {
 
   async function handleTogglePublish() {
     setToggling(true)
-    const result = await updateForm(form.id, {
-      is_published: !form.is_published,
-    })
+    const result = await updateForm(form.id, { is_published: !form.is_published })
     if (result.error) {
       toast.error(result.error)
     } else {
-      toast.success(
-        form.is_published ? "Form unpublished" : "Form published — share the link!"
-      )
+      toast.success(form.is_published ? "הטופס הוסר מפרסום" : "הטופס פורסם! שתף את הקישור.")
     }
     setToggling(false)
   }
@@ -81,10 +72,10 @@ export function FormCard({ form, responseCount }: FormCardProps) {
         ? `${window.location.origin}/f/${form.id}`
         : `/f/${form.id}`
     navigator.clipboard.writeText(url)
-    toast.success("Link copied!")
+    toast.success("הקישור הועתק!")
   }
 
-  const formattedDate = new Date(form.created_at).toLocaleDateString("en-US", {
+  const formattedDate = new Date(form.created_at).toLocaleDateString("he-IL", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -120,34 +111,24 @@ export function FormCard({ form, responseCount }: FormCardProps) {
               <DropdownMenuItem asChild>
                 <Link href={`/forms/${form.id}`} className="flex items-center gap-2">
                   <Pencil className="h-3.5 w-3.5" />
-                  Edit
+                  ערוך
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link
-                  href={`/forms/${form.id}/results`}
-                  className="flex items-center gap-2"
-                >
+                <Link href={`/forms/${form.id}/results`} className="flex items-center gap-2">
                   <BarChart2 className="h-3.5 w-3.5" />
-                  Results
+                  תוצאות
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link
-                  href={`/f/${form.id}`}
-                  target="_blank"
-                  className="flex items-center gap-2"
-                >
+                <Link href={`/f/${form.id}`} target="_blank" className="flex items-center gap-2">
                   <ExternalLink className="h-3.5 w-3.5" />
-                  Preview
+                  תצוגה מקדימה
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleCopyLink}
-                className="flex items-center gap-2"
-              >
+              <DropdownMenuItem onClick={handleCopyLink} className="flex items-center gap-2">
                 <Copy className="h-3.5 w-3.5" />
-                Copy link
+                העתק קישור
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -158,12 +139,12 @@ export function FormCard({ form, responseCount }: FormCardProps) {
                 {form.is_published ? (
                   <>
                     <EyeOff className="h-3.5 w-3.5" />
-                    Unpublish
+                    הסר פרסום
                   </>
                 ) : (
                   <>
                     <Globe className="h-3.5 w-3.5" />
-                    Publish
+                    פרסם
                   </>
                 )}
               </DropdownMenuItem>
@@ -173,7 +154,7 @@ export function FormCard({ form, responseCount }: FormCardProps) {
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Delete
+                מחק
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -182,19 +163,15 @@ export function FormCard({ form, responseCount }: FormCardProps) {
         {/* Stats row */}
         <div className="flex items-center gap-3">
           <div className="flex-1 bg-neutral-50 rounded-xl p-3 text-center">
-            <div className="text-lg font-bold text-neutral-900">
-              {form.fields.length}
-            </div>
+            <div className="text-lg font-bold text-neutral-900">{form.fields.length}</div>
             <div className="text-xs text-neutral-500">
-              {form.fields.length === 1 ? "field" : "fields"}
+              {form.fields.length === 1 ? "שדה" : "שדות"}
             </div>
           </div>
           <div className="flex-1 bg-neutral-50 rounded-xl p-3 text-center">
-            <div className="text-lg font-bold text-neutral-900">
-              {responseCount}
-            </div>
+            <div className="text-lg font-bold text-neutral-900">{responseCount}</div>
             <div className="text-xs text-neutral-500">
-              {responseCount === 1 ? "response" : "responses"}
+              {responseCount === 1 ? "תגובה" : "תגובות"}
             </div>
           </div>
         </div>
@@ -206,15 +183,15 @@ export function FormCard({ form, responseCount }: FormCardProps) {
             variant={form.is_published ? "default" : "secondary"}
             className="text-xs rounded-lg"
           >
-            {form.is_published ? "Published" : "Draft"}
+            {form.is_published ? "מפורסם" : "טיוטה"}
           </Badge>
         </div>
 
-        {/* Click overlay to edit */}
+        {/* Click overlay */}
         <Link
           href={`/forms/${form.id}`}
           className="absolute inset-0 rounded-2xl"
-          aria-label={`Edit ${form.name}`}
+          aria-label={`ערוך ${form.name}`}
         />
       </div>
 
@@ -222,22 +199,17 @@ export function FormCard({ form, responseCount }: FormCardProps) {
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Delete form?</DialogTitle>
+            <DialogTitle>מחיקת טופס?</DialogTitle>
             <DialogDescription>
-              This will permanently delete &quot;{form.name}&quot; and all its
-              responses. This action cannot be undone.
+              פעולה זו תמחק לצמיתות את &quot;{form.name}&quot; ואת כל התגובות שלו. לא ניתן לבטל פעולה זו.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              Cancel
+              ביטול
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting…" : "Delete"}
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "מוחק…" : "מחק"}
             </Button>
           </DialogFooter>
         </DialogContent>

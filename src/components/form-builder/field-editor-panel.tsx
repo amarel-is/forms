@@ -16,9 +16,9 @@ interface FieldEditorPanelProps {
 }
 
 const TYPE_LABEL = {
-  text: "Text",
-  dropdown: "Dropdown",
-  multiselect: "Multi-select",
+  text: "טקסט",
+  dropdown: "רשימה נפתחת",
+  multiselect: "בחירה מרובה",
 }
 
 export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
@@ -52,11 +52,9 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Field type badge */}
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-neutral-700">
-          Field settings
-        </h3>
+        <h3 className="text-sm font-semibold text-neutral-700">הגדרות שדה</h3>
         <Badge variant="secondary" className="text-xs rounded-lg">
           {TYPE_LABEL[field.type]}
         </Badge>
@@ -67,36 +65,36 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
       {/* Label */}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
-          Label
+          תווית
         </Label>
         <Input
           value={field.label}
           onChange={(e) => update({ label: e.target.value })}
-          placeholder="e.g. What is your name?"
+          placeholder="לדוגמה: מה שמך?"
           className="h-9 rounded-xl text-sm"
         />
       </div>
 
-      {/* Placeholder */}
+      {/* Placeholder (text only) */}
       {field.type === "text" && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
-            Placeholder
+            טקסט כוונון
           </Label>
           <Input
             value={field.placeholder ?? ""}
             onChange={(e) => update({ placeholder: e.target.value })}
-            placeholder="e.g. Type your answer here…"
+            placeholder="לדוגמה: הקלד את תשובתך כאן…"
             className="h-9 rounded-xl text-sm"
           />
         </div>
       )}
 
-      {/* Options (dropdown/multiselect) */}
+      {/* Options */}
       {hasOptions && (
         <div className="space-y-2">
           <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
-            Options
+            אפשרויות
           </Label>
 
           {(field.options ?? []).length > 0 && (
@@ -106,9 +104,7 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
                   key={i}
                   className="flex items-center gap-2 bg-neutral-50 rounded-lg px-3 py-2"
                 >
-                  <span className="flex-1 text-sm text-neutral-700 truncate">
-                    {opt}
-                  </span>
+                  <span className="flex-1 text-sm text-neutral-700 truncate">{opt}</span>
                   <button
                     onClick={() => removeOption(i)}
                     className="text-neutral-300 hover:text-red-500 transition-colors"
@@ -125,7 +121,7 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
               value={newOption}
               onChange={(e) => setNewOption(e.target.value)}
               onKeyDown={handleOptionKeyDown}
-              placeholder="Add an option…"
+              placeholder="הוסף אפשרות…"
               className="h-9 rounded-xl text-sm flex-1"
             />
             <Button
@@ -140,7 +136,7 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
           </div>
           {(field.options ?? []).length === 0 && (
             <p className="text-xs text-neutral-400">
-              Press Enter or click + to add options
+              לחץ Enter או + כדי להוסיף אפשרויות
             </p>
           )}
         </div>
@@ -151,16 +147,12 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
       {/* Required toggle */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-neutral-700">Required</p>
-          <p className="text-xs text-neutral-400">
-            Respondents must answer this field
-          </p>
+          <p className="text-sm font-medium text-neutral-700">שדה חובה</p>
+          <p className="text-xs text-neutral-400">המשיבים חייבים לענות על שדה זה</p>
         </div>
         <Checkbox
           checked={field.required}
-          onCheckedChange={(checked) =>
-            update({ required: checked === true })
-          }
+          onCheckedChange={(checked) => update({ required: checked === true })}
           className="rounded-md"
         />
       </div>

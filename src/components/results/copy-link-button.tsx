@@ -30,7 +30,7 @@ export function CopyLinkButton({ formId }: CopyLinkButtonProps) {
       ) : (
         <Copy className="h-3.5 w-3.5" />
       )}
-      {copied ? "Copied!" : "Copy link"}
+      {copied ? "הועתק!" : "העתק קישור"}
     </Button>
   )
 }

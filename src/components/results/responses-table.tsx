@@ -1,7 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -19,12 +17,10 @@ interface ResponsesTableProps {
 }
 
 export function ResponsesTable({ fields, responses }: ResponsesTableProps) {
-  const [expanded, setExpanded] = useState<string | null>(null)
-
   if (responses.length === 0) {
     return (
       <div className="text-center py-12 text-neutral-400 text-sm">
-        No responses yet
+        עדיין אין תגובות
       </div>
     )
   }
@@ -52,53 +48,35 @@ export function ResponsesTable({ fields, responses }: ResponsesTableProps) {
         <TableHeader>
           <TableRow className="bg-neutral-50">
             <TableHead className="text-xs font-semibold text-neutral-500 w-32">
-              Submitted
+              זמן שליחה
             </TableHead>
             {fields.map((f) => (
               <TableHead
                 key={f.id}
                 className="text-xs font-semibold text-neutral-500 min-w-[140px]"
               >
-                {f.label || "Untitled"}
+                {f.label || "ללא שם"}
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {responses.map((response) => (
-            <>
-              <TableRow
-                key={response.id}
-                className="cursor-pointer hover:bg-neutral-50"
-                onClick={() =>
-                  setExpanded(expanded === response.id ? null : response.id)
-                }
-              >
-                <TableCell className="text-xs text-neutral-500 whitespace-nowrap">
-                  <div className="flex items-center gap-1.5">
-                    {expanded === response.id ? (
-                      <ChevronUp className="h-3 w-3" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3" />
-                    )}
-                    {new Date(response.submitted_at).toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }
-                    )}
-                  </div>
+            <TableRow key={response.id} className="hover:bg-neutral-50">
+              <TableCell className="text-xs text-neutral-500 whitespace-nowrap">
+                {new Date(response.submitted_at).toLocaleDateString("he-IL", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </TableCell>
+              {fields.map((f) => (
+                <TableCell key={f.id} className="max-w-[200px] truncate">
+                  {formatValue(response.data[f.id])}
                 </TableCell>
-                {fields.map((f) => (
-                  <TableCell key={f.id} className="max-w-[200px] truncate">
-                    {formatValue(response.data[f.id])}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </>
+              ))}
+            </TableRow>
           ))}
         </TableBody>
       </Table>

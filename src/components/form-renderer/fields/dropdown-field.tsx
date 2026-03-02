@@ -17,24 +17,17 @@ interface DropdownFieldProps {
   error?: string
 }
 
-export function DropdownField({
-  field,
-  value,
-  onChange,
-  error,
-}: DropdownFieldProps) {
+export function DropdownField({ field, value, onChange, error }: DropdownFieldProps) {
   return (
     <div className="space-y-1.5">
       <Label className="text-sm font-medium text-neutral-800">
         {field.label}
-        {field.required && <span className="text-red-500 ml-1">*</span>}
+        {field.required && <span className="text-red-500 ms-1">*</span>}
       </Label>
 
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger
-          className={`h-10 rounded-xl text-sm ${error ? "border-red-500" : ""}`}
-        >
-          <SelectValue placeholder="Select an option…" />
+        <SelectTrigger className={`h-10 rounded-xl text-sm ${error ? "border-red-500" : ""}`}>
+          <SelectValue placeholder="בחר אפשרות…" />
         </SelectTrigger>
         <SelectContent>
           {(field.options ?? []).map((opt) => (

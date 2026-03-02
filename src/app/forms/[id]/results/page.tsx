@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { ArrowLeft, BarChart2, ExternalLink } from "lucide-react"
+import { ArrowRight, BarChart2, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .select("name")
     .eq("id", id)
     .single()
-  return { title: row?.name ? `Results — ${row.name}` : "Results" }
+  return { title: row?.name ? `תוצאות — ${row.name}` : "תוצאות" }
 }
 
 export default async function ResultsPage({ params }: Props) {
@@ -35,10 +35,7 @@ export default async function ResultsPage({ params }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
   const { data: formRow, error: formError } = await sb
@@ -63,11 +60,15 @@ export default async function ResultsPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-neutral-50">
+      {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-neutral-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
+            {/* ArrowRight = "back" in RTL */}
             <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg shrink-0">
-              <Link href="/dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+              <Link href="/dashboard">
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
             <div className="min-w-0 flex items-center gap-2">
               <h1 className="text-sm font-semibold text-neutral-900 truncate">{form.name}</h1>
@@ -75,7 +76,7 @@ export default async function ResultsPage({ params }: Props) {
                 variant={form.is_published ? "default" : "secondary"}
                 className="text-xs rounded-lg shrink-0"
               >
-                {form.is_published ? "Published" : "Draft"}
+                {form.is_published ? "מפורסם" : "טיוטה"}
               </Badge>
             </div>
           </div>
@@ -84,13 +85,13 @@ export default async function ResultsPage({ params }: Props) {
             <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs hidden sm:flex">
               <Link href={`/forms/${id}`}>
                 <BarChart2 className="h-3.5 w-3.5" />
-                Edit form
+                ערוך טופס
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs">
               <Link href={`/f/${id}`} target="_blank">
                 <ExternalLink className="h-3.5 w-3.5" />
-                Preview
+                תצוגה מקדימה
               </Link>
             </Button>
             <CopyLinkButton formId={id} />
@@ -103,21 +104,24 @@ export default async function ResultsPage({ params }: Props) {
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-white rounded-2xl border border-neutral-200 p-4 text-center">
             <div className="text-2xl font-bold text-neutral-900">{responses.length}</div>
-            <div className="text-xs text-neutral-500 mt-0.5">Total responses</div>
+            <div className="text-xs text-neutral-500 mt-0.5">סה״כ תגובות</div>
           </div>
           <div className="bg-white rounded-2xl border border-neutral-200 p-4 text-center">
             <div className="text-2xl font-bold text-neutral-900">{form.fields.length}</div>
             <div className="text-xs text-neutral-500 mt-0.5">
-              {form.fields.length === 1 ? "Field" : "Fields"}
+              {form.fields.length === 1 ? "שדה" : "שדות"}
             </div>
           </div>
           <div className="bg-white rounded-2xl border border-neutral-200 p-4 text-center">
             <div className="text-sm font-semibold text-neutral-900">
               {lastResponse
-                ? new Date(lastResponse).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                ? new Date(lastResponse).toLocaleDateString("he-IL", {
+                    month: "short",
+                    day: "numeric",
+                  })
                 : "—"}
             </div>
-            <div className="text-xs text-neutral-500 mt-0.5">Last response</div>
+            <div className="text-xs text-neutral-500 mt-0.5">תגובה אחרונה</div>
           </div>
         </div>
 
@@ -125,7 +129,7 @@ export default async function ResultsPage({ params }: Props) {
         {responses.length > 0 && (
           <>
             <div>
-              <h2 className="text-sm font-semibold text-neutral-700 mb-4">Summary</h2>
+              <h2 className="text-sm font-semibold text-neutral-700 mb-4">סיכום</h2>
               <FieldStats fields={form.fields} responses={responses} />
             </div>
             <Separator />
@@ -134,7 +138,7 @@ export default async function ResultsPage({ params }: Props) {
 
         {/* Table */}
         <div>
-          <h2 className="text-sm font-semibold text-neutral-700 mb-4">All responses</h2>
+          <h2 className="text-sm font-semibold text-neutral-700 mb-4">כל התגובות</h2>
           <ResponsesTable fields={form.fields} responses={responses} />
         </div>
       </main>
