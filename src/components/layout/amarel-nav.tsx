@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Plus, LayoutGrid, BarChart3 } from "lucide-react"
+import { Plus, LayoutGrid, BarChart3, UserCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/notifications/notification-bell"
 import { SignOutButton } from "./sign-out-button"
@@ -58,7 +58,7 @@ function NavLink({
 interface AppHeaderProps {
   userId: string
   userEmail?: string
-  activePath?: "dashboard" | "forms" | "new" | "analytics"
+  activePath?: "dashboard" | "forms" | "new" | "analytics" | "profile"
   hasSubBar?: boolean
 }
 
@@ -101,12 +101,18 @@ export function AppHeader({ userId, userEmail, activePath, hasSubBar }: AppHeade
           {/* Notification bell */}
           <NotificationBell userId={userId} />
 
-          {/* Email */}
-          {userEmail && (
-            <span className="text-xs text-white/40 hidden md:block" dir="ltr">
-              {userEmail}
-            </span>
-          )}
+          {/* Profile link */}
+          <Link
+            href="/profile"
+            title={userEmail ?? "פרופיל"}
+            className={`flex items-center justify-center h-8 w-8 rounded-xl transition-colors ${
+              activePath === "profile"
+                ? "bg-white/15 text-white"
+                : "text-white/60 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <UserCircle className="h-4 w-4" />
+          </Link>
 
           {/* Sign out */}
           <SignOutButton />

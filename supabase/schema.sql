@@ -54,6 +54,10 @@ alter table responses enable row level security;
 create policy "forms_select_owner" on forms
   for select using (auth.uid() = user_id);
 
+-- Forms: anyone can read published forms (public fill page)
+create policy "forms_select_public_published" on forms
+  for select using (is_published = true);
+
 create policy "forms_insert_owner" on forms
   for insert with check (auth.uid() = user_id);
 
