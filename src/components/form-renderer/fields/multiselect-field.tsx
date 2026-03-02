@@ -11,7 +11,12 @@ interface MultiSelectFieldProps {
   error?: string
 }
 
-export function MultiSelectField({ field, value, onChange, error }: MultiSelectFieldProps) {
+export function MultiSelectField({
+  field,
+  value,
+  onChange,
+  error,
+}: MultiSelectFieldProps) {
   function toggle(opt: string) {
     if (value.includes(opt)) {
       onChange(value.filter((v) => v !== opt))
@@ -22,32 +27,53 @@ export function MultiSelectField({ field, value, onChange, error }: MultiSelectF
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-neutral-800">
+      <Label className="text-base font-medium text-neutral-800 leading-snug">
         {field.label}
-        {field.required && <span className="text-red-500 ms-1">*</span>}
+        {field.required && (
+          <span className="text-red-500 ms-1 font-bold">*</span>
+        )}
       </Label>
 
-      <div className="space-y-2">
-        {(field.options ?? []).map((opt) => (
-          <label
-            key={opt}
-            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-              value.includes(opt)
-                ? "border-neutral-900 bg-neutral-50"
-                : "border-neutral-200 hover:border-neutral-300"
-            }`}
-          >
-            <Checkbox
-              checked={value.includes(opt)}
-              onCheckedChange={() => toggle(opt)}
-              className="rounded-md"
-            />
-            <span className="text-sm text-neutral-700">{opt}</span>
-          </label>
-        ))}
+      <div className="space-y-2.5">
+        {(field.options ?? []).map((opt) => {
+          const selected = value.includes(opt)
+          return (
+            /*
+             * The entire row is the tap target — at least 52px tall via py-4.
+             * This satisfies Apple's 44px minimum with comfortable margin.
+             */
+            <label
+              key={opt}
+              className={`
+                flex items-center gap-4 py-4 px-4
+                rounded-xl border-2 cursor-pointer
+                transition-all duration-100 select-none
+                active:scale-[0.99]
+                ${
+                  selected
+                    ? "border-neutral-900 bg-neutral-50"
+                    : "border-neutral-200 bg-white active:bg-neutral-50"
+                }
+              `}
+            >
+              <Checkbox
+                checked={selected}
+                onCheckedChange={() => toggle(opt)}
+                className="h-5 w-5 rounded-md shrink-0"
+              />
+              <span className="text-base text-neutral-800 leading-snug flex-1">
+                {opt}
+              </span>
+            </label>
+          )
+        })}
       </div>
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-500 flex items-center gap-1">
+          <span>⚠</span> {error}
+        </p>
+      )}
     </div>
   )
 }

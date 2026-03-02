@@ -120,3 +120,53 @@ input::placeholder,
 textarea::placeholder {
   text-align: start;
 }
+
+/* ── Mobile optimisations ────────────────────────────────────────────────────
+ *
+ * 1. font-size ≥ 16px on all form controls prevents iOS Safari from
+ *    auto-zooming the page when an input receives focus.
+ *
+ * 2. touch-action: manipulation removes the 300 ms tap delay on mobile
+ *    browsers without disabling pinch-zoom.
+ *
+ * 3. -webkit-tap-highlight-color: transparent removes the grey flash on tap
+ *    for custom interactive elements (buttons, labels).
+ *
+ * 4. padding-bottom: env(safe-area-inset-bottom) ensures content is not
+ *    obscured by the iPhone home indicator bar.
+ * ──────────────────────────────────────────────────────────────────────────*/
+
+/* Prevent iOS zoom on all form inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="date"],
+textarea,
+select {
+  font-size: max(16px, 1rem); /* always ≥ 16 px */
+  touch-action: manipulation;
+}
+
+/* Remove tap flash on interactive elements */
+button,
+a,
+label,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Safe-area bottom padding utility — used by the sticky submit bar */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Smooth momentum scrolling on iOS */
+html {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}

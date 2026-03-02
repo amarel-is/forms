@@ -12,6 +12,7 @@ import {
   Copy,
   Globe,
   EyeOff,
+  Users,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -120,6 +121,14 @@ export function FormCard({ form, responseCount }: FormCardProps) {
                   תוצאות
                 </Link>
               </DropdownMenuItem>
+              {form.form_type === "attendance" && (
+                <DropdownMenuItem asChild>
+                  <Link href={`/forms/${form.id}/attendance`} className="flex items-center gap-2">
+                    <Users className="h-3.5 w-3.5" />
+                    לוח נוכחות
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem asChild>
                 <Link href={`/f/${form.id}`} target="_blank" className="flex items-center gap-2">
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -179,12 +188,20 @@ export function FormCard({ form, responseCount }: FormCardProps) {
         {/* Footer */}
         <div className="flex items-center justify-between pt-1">
           <span className="text-xs text-neutral-400">{formattedDate}</span>
-          <Badge
-            variant={form.is_published ? "default" : "secondary"}
-            className="text-xs rounded-lg"
-          >
-            {form.is_published ? "מפורסם" : "טיוטה"}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            {form.form_type === "attendance" && (
+              <Badge className="text-xs rounded-lg bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">
+                <Users className="h-2.5 w-2.5 me-1" />
+                נוכחות
+              </Badge>
+            )}
+            <Badge
+              variant={form.is_published ? "default" : "secondary"}
+              className="text-xs rounded-lg"
+            >
+              {form.is_published ? "מפורסם" : "טיוטה"}
+            </Badge>
+          </div>
         </div>
 
         {/* Click overlay */}

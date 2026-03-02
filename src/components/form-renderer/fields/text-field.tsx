@@ -13,14 +13,15 @@ interface TextFieldProps {
 }
 
 export function TextField({ field, value, onChange, error }: TextFieldProps) {
-  const isLong =
-    (field.placeholder ?? "").length > 60 || field.label.length > 60
+  const isLong = field.label.length > 50 || (field.placeholder ?? "").length > 50
 
   return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-neutral-800">
+    <div className="space-y-2">
+      <Label className="text-base font-medium text-neutral-800 leading-snug">
         {field.label}
-        {field.required && <span className="text-red-500 ms-1">*</span>}
+        {field.required && (
+          <span className="text-red-500 ms-1 font-bold">*</span>
+        )}
       </Label>
 
       {isLong ? (
@@ -28,23 +29,35 @@ export function TextField({ field, value, onChange, error }: TextFieldProps) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder ?? "תשובתך…"}
-          rows={3}
-          className={`rounded-xl resize-none text-sm ${
-            error ? "border-red-500 focus-visible:ring-red-500" : ""
-          }`}
+          rows={4}
+          className={`
+            rounded-xl resize-none
+            text-base          /* ≥16 px — prevents iOS Safari auto-zoom */
+            min-h-[100px]
+            px-4 py-3
+            ${error ? "border-red-400 focus-visible:ring-red-400" : ""}
+          `}
         />
       ) : (
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder ?? "תשובתך…"}
-          className={`h-10 rounded-xl text-sm ${
-            error ? "border-red-500 focus-visible:ring-red-500" : ""
-          }`}
+          className={`
+            h-12              /* 48 px — exceeds Apple 44 px minimum tap target */
+            rounded-xl
+            text-base          /* ≥16 px — prevents iOS Safari auto-zoom */
+            px-4
+            ${error ? "border-red-400 focus-visible:ring-red-400" : ""}
+          `}
         />
       )}
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-500 flex items-center gap-1">
+          <span>⚠</span> {error}
+        </p>
+      )}
     </div>
   )
 }

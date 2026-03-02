@@ -1,30 +1,57 @@
-// ─── Domain types ─────────────────────────────────────────────────────────────
+// ─── Field types ─────────────────────────────────────────────────────────────
 
-export type FieldType = "text" | "dropdown" | "multiselect" | "entry_exit"
+/** Input fields — collect user answers */
+export type InputFieldType = "text" | "dropdown" | "multiselect" | "entry_exit"
 
-export type FormType = "general" | "attendance"
+/** Layout/visual fields — display only, no answer collected */
+export type LayoutFieldType = "heading" | "subheading" | "paragraph" | "divider" | "image"
+
+export type FieldType = InputFieldType | LayoutFieldType
+
+export const LAYOUT_FIELD_TYPES: LayoutFieldType[] = [
+  "heading",
+  "subheading",
+  "paragraph",
+  "divider",
+  "image",
+]
+
+export function isLayoutField(type: FieldType): type is LayoutFieldType {
+  return (LAYOUT_FIELD_TYPES as string[]).includes(type)
+}
+
+// ─── Field config ─────────────────────────────────────────────────────────────
 
 export interface FieldConfig {
   id: string
   type: FieldType
+  /** For input fields: the question label shown above the input.
+   *  For heading/subheading: the text to display.
+   *  For paragraph: a short title (shown in builder list).
+   *  For image: caption / alt text.
+   *  For divider: ignored. */
   label: string
+  /** Input fields: placeholder hint text.
+   *  Image field: the image URL (src). */
   placeholder?: string
-  required: boolean
-  options?: string[]       // dropdown & multiselect only
-  // attendance meta — marks the purpose of this field so the presence
-  // dashboard can identify the employee key and the direction value
+  required: boolean               // only meaningful for input fields
+  options?: string[]              // dropdown & multiselect only
+  content?: string                // paragraph body text; image URL alternative
   attendance_role?: "id_number" | "name" | "division" | "direction"
 }
 
+// ─── Form types ───────────────────────────────────────────────────────────────
+
+export type FormType = "general" | "attendance"
+
 export interface FormSettings {
   submit_message?: string
-  // attendance-specific config
-  attendance_id_field?: string   // field ID used as the unique employee key
-  attendance_direction_field?: string  // field ID holding כניסה/יציאה
+  submit_label?: string           // text on the submit button (default: "שלח")
+  attendance_id_field?: string
+  attendance_direction_field?: string
 }
 
 export interface FormSchema {
-  // reserved for future per-field validation rules or computed fields
   [key: string]: unknown
 }
 
@@ -155,10 +182,8 @@ export type Database = {
 
 // ─── Cast helpers ─────────────────────────────────────────────────────────────
 
-export function rowToForm(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  row: any
-): Form {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function rowToForm(row: any): Form {
   return {
     id: row.id,
     user_id: row.user_id,
@@ -174,10 +199,8 @@ export function rowToForm(
   }
 }
 
-export function rowToResponse(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  row: any
-): FormResponse {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function rowToResponse(row: any): FormResponse {
   return {
     id: row.id,
     form_id: row.form_id,
@@ -188,7 +211,6 @@ export function rowToResponse(
 
 // ─── Attendance helpers ───────────────────────────────────────────────────────
 
-/** Build the standard attendance form fields */
 export function buildAttendanceFields(): FieldConfig[] {
   return [
     {
@@ -212,7 +234,7 @@ export function buildAttendanceFields(): FieldConfig[] {
       type: "dropdown",
       label: "חטיבה",
       required: true,
-      options: ["מחלקה א", "מחלקה ב", "מחלקה ג", "הנהלה", "אחר"],
+      options: ["הנהלה", "כספים", "מבצעים", "לוגיסטיקה", "טכנולוגיה", "משאבי אנוש", "שיווק", "אחר"],
       attendance_role: "division",
     },
     {
@@ -225,12 +247,10 @@ export function buildAttendanceFields(): FieldConfig[] {
   ]
 }
 
-/** From a list of responses, compute who is currently present in the office */
 export function computePresence(
   responses: FormResponse[],
   form: Form
 ): PresenceRecord[] {
-  // Find the field that holds direction and the unique-key field
   const dirField =
     form.fields.find((f) => f.attendance_role === "direction")?.id ??
     form.settings.attendance_direction_field
@@ -244,7 +264,6 @@ export function computePresence(
 
   if (!dirField || !idField) return []
 
-  // Group by id_number, keep only the latest response per person
   const latestByPerson = new Map<string, FormResponse>()
   for (const r of [...responses].sort(
     (a, b) =>

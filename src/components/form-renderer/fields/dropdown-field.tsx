@@ -19,26 +19,44 @@ interface DropdownFieldProps {
 
 export function DropdownField({ field, value, onChange, error }: DropdownFieldProps) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-neutral-800">
+    <div className="space-y-2">
+      <Label className="text-base font-medium text-neutral-800 leading-snug">
         {field.label}
-        {field.required && <span className="text-red-500 ms-1">*</span>}
+        {field.required && (
+          <span className="text-red-500 ms-1 font-bold">*</span>
+        )}
       </Label>
 
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className={`h-10 rounded-xl text-sm ${error ? "border-red-500" : ""}`}>
+        <SelectTrigger
+          className={`
+            h-12              /* 48 px touch target */
+            rounded-xl
+            text-base          /* ≥16 px prevents iOS zoom */
+            px-4
+            ${error ? "border-red-400" : ""}
+          `}
+        >
           <SelectValue placeholder="בחר אפשרות…" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="rounded-xl">
           {(field.options ?? []).map((opt) => (
-            <SelectItem key={opt} value={opt}>
+            <SelectItem
+              key={opt}
+              value={opt}
+              className="text-base py-3 cursor-pointer"  /* bigger tap rows */
+            >
               {opt}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-500 flex items-center gap-1">
+          <span>⚠</span> {error}
+        </p>
+      )}
     </div>
   )
 }

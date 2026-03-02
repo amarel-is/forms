@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { ArrowRight, BarChart2, ExternalLink } from "lucide-react"
+import { ArrowRight, BarChart2, ExternalLink, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -82,6 +82,14 @@ export default async function ResultsPage({ params }: Props) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {form.form_type === "attendance" && (
+              <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs border-blue-200 text-blue-600 hover:bg-blue-50">
+                <Link href={`/forms/${id}/attendance`}>
+                  <Users className="h-3.5 w-3.5" />
+                  לוח נוכחות
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs hidden sm:flex">
               <Link href={`/forms/${id}`}>
                 <BarChart2 className="h-3.5 w-3.5" />
