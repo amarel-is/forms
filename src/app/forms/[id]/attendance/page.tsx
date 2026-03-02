@@ -121,16 +121,19 @@ export default async function AttendancePage({ params, searchParams }: Props) {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-xl border-b border-neutral-200">
+      {/* Header — Amarel dark nav */}
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{ backgroundColor: "var(--amarel-nav)", borderBottomColor: "var(--amarel-nav-border)" }}
+      >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg shrink-0">
+            <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-xl shrink-0 text-white/70 hover:text-white hover:bg-white/10">
               <Link href="/dashboard"><ArrowRight className="h-4 w-4" /></Link>
             </Button>
             <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-sm font-semibold text-neutral-900 truncate">{form.name}</h1>
-              <Badge className="text-xs rounded-lg shrink-0 bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">
+              <h1 className="text-sm font-semibold text-white truncate">{form.name}</h1>
+              <Badge className="text-xs rounded-lg shrink-0 bg-white/15 text-white border-white/20 hover:bg-white/20">
                 <Users className="h-3 w-3 me-1" />
                 נוכחות
               </Badge>
@@ -138,16 +141,16 @@ export default async function AttendancePage({ params, searchParams }: Props) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs hidden sm:flex">
+            <Button variant="ghost" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs text-white/80 hover:text-white hover:bg-white/10 hidden sm:flex">
               <Link href={`/forms/${id}`}>
                 <Pencil className="h-3.5 w-3.5" />
-                ערוך טופס
+                ערוך
               </Link>
             </Button>
-            <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs">
+            <Button variant="ghost" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs text-white/80 hover:text-white hover:bg-white/10">
               <Link href={`/f/${id}`} target="_blank">
                 <ExternalLink className="h-3.5 w-3.5" />
-                פתח טופס
+                פתח
               </Link>
             </Button>
             <CopyLinkButton formId={id} />

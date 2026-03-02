@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import Image from "next/image"
 import LoginForm from "./login-form"
 
 export const dynamic = "force-dynamic"
@@ -13,24 +14,24 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-neutral-900 flex items-center justify-center mb-4">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="text-white"
-            >
-              <rect x="3" y="3" width="18" height="4" rx="1" fill="currentColor" opacity="0.9" />
-              <rect x="3" y="10" width="12" height="4" rx="1" fill="currentColor" opacity="0.7" />
-              <rect x="3" y="17" width="8" height="4" rx="1" fill="currentColor" opacity="0.5" />
-            </svg>
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg"
+            style={{ background: "linear-gradient(135deg, #2D4458 0%, #1e3347 100%)" }}
+          >
+            <Image
+              src="/logos/amarel.png"
+              alt="Amarel"
+              width={40}
+              height={40}
+              className="object-contain"
+              priority
+            />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
             FormCraft
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            בנה טפסים יפים תוך דקות
+          <p className="text-sm mt-1 font-medium" style={{ color: "#f97316" }}>
+            by Amarel
           </p>
         </div>
 

@@ -60,22 +60,19 @@ export default async function ResultsPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-neutral-200">
+      {/* Header — Amarel dark nav */}
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{ backgroundColor: "var(--amarel-nav)", borderBottomColor: "var(--amarel-nav-border)" }}
+      >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            {/* ArrowRight = "back" in RTL */}
-            <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg shrink-0">
-              <Link href="/dashboard">
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+            <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-xl shrink-0 text-white/70 hover:text-white hover:bg-white/10">
+              <Link href="/dashboard"><ArrowRight className="h-4 w-4" /></Link>
             </Button>
             <div className="min-w-0 flex items-center gap-2">
-              <h1 className="text-sm font-semibold text-neutral-900 truncate">{form.name}</h1>
-              <Badge
-                variant={form.is_published ? "default" : "secondary"}
-                className="text-xs rounded-lg shrink-0"
-              >
+              <h1 className="text-sm font-semibold text-white truncate">{form.name}</h1>
+              <Badge className={`text-xs rounded-lg shrink-0 border ${form.is_published ? "bg-green-500/20 text-green-300 border-green-500/30" : "bg-white/10 text-white/60 border-white/20"}`}>
                 {form.is_published ? "מפורסם" : "טיוטה"}
               </Badge>
             </div>
@@ -83,20 +80,20 @@ export default async function ResultsPage({ params }: Props) {
 
           <div className="flex items-center gap-2 shrink-0">
             {form.form_type === "attendance" && (
-              <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs border-blue-200 text-blue-600 hover:bg-blue-50">
+              <Button variant="ghost" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs text-white/80 hover:text-white hover:bg-white/10">
                 <Link href={`/forms/${id}/attendance`}>
                   <Users className="h-3.5 w-3.5" />
-                  לוח נוכחות
+                  נוכחות
                 </Link>
               </Button>
             )}
-            <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs hidden sm:flex">
+            <Button variant="ghost" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs text-white/80 hover:text-white hover:bg-white/10 hidden sm:flex">
               <Link href={`/forms/${id}`}>
                 <BarChart2 className="h-3.5 w-3.5" />
-                ערוך טופס
+                ערוך
               </Link>
             </Button>
-            <Button variant="outline" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs">
+            <Button variant="ghost" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs text-white/80 hover:text-white hover:bg-white/10">
               <Link href={`/f/${id}`} target="_blank">
                 <ExternalLink className="h-3.5 w-3.5" />
                 תצוגה מקדימה

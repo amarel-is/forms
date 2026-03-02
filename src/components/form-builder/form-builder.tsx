@@ -31,6 +31,10 @@ import {
   Users,
   Sparkles,
   BarChart2,
+  User,
+  CreditCard,
+  Building2,
+  ArrowLeftRight,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -39,6 +43,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
+import { AmarelLogo } from "@/components/layout/amarel-nav"
 import {
   Dialog,
   DialogContent,
@@ -218,24 +223,41 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   return (
     <>
       <div className="flex flex-col h-screen bg-neutral-50">
-        {/* Header */}
-        <header className="shrink-0 bg-white border-b border-neutral-200 px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+        {/* Header — Amarel branded dark nav */}
+        <header
+          className="shrink-0 border-b px-4 sm:px-6 h-14 flex items-center justify-between gap-4"
+          style={{
+            backgroundColor: "var(--amarel-nav)",
+            borderBottomColor: "var(--amarel-nav-border)",
+          }}
+        >
           <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="h-8 w-8 rounded-xl shrink-0 text-white/70 hover:text-white hover:bg-white/10"
+            >
               <Link href="/dashboard">
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
+
+            <div className="hidden sm:block">
+              <AmarelLogo size="sm" />
+            </div>
+
+            <div className="w-px h-5 bg-white/20 hidden sm:block" />
 
             <div className="flex items-center gap-2 min-w-0">
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="טופס ללא שם"
-                className="border-0 shadow-none bg-transparent px-0 text-sm font-semibold text-neutral-900 h-auto focus-visible:ring-0 placeholder:text-neutral-400 w-full max-w-xs"
+                className="border-0 shadow-none bg-transparent px-0 text-sm font-semibold text-white h-auto focus-visible:ring-0 placeholder:text-white/40 w-full max-w-xs"
               />
               {formType === "attendance" && (
-                <Badge className="text-xs rounded-lg shrink-0 bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">
+                <Badge className="text-xs rounded-lg shrink-0 bg-white/15 text-white border-white/20 hover:bg-white/20">
                   <Users className="h-3 w-3 me-1" />
                   נוכחות
                 </Badge>
@@ -249,17 +271,22 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                 variant="ghost"
                 size="sm"
                 asChild
-                className="rounded-xl gap-1.5 h-8 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                className="rounded-xl gap-1.5 h-8 text-xs text-white/80 hover:text-white hover:bg-white/10"
               >
                 <Link href={`/forms/${initialForm.id}/attendance`}>
                   <Users className="h-3.5 w-3.5" />
-                  לוח נוכחות
+                  נוכחות
                 </Link>
               </Button>
             )}
 
             {isEditing && (
-              <Button variant="ghost" size="sm" asChild className="rounded-xl gap-1.5 h-8 text-xs">
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="rounded-xl gap-1.5 h-8 text-xs text-white/80 hover:text-white hover:bg-white/10"
+              >
                 <Link href={`/forms/${initialForm.id}/results`}>
                   <BarChart2 className="h-3.5 w-3.5" />
                   תוצאות
@@ -272,21 +299,21 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                 variant="ghost"
                 size="sm"
                 asChild
-                className="rounded-xl gap-1.5 h-8 text-xs hidden sm:flex"
+                className="rounded-xl gap-1.5 h-8 text-xs text-white/70 hover:text-white hover:bg-white/10 hidden sm:flex"
               >
                 <Link href={`/f/${initialForm.id}`} target="_blank">
                   <ExternalLink className="h-3.5 w-3.5" />
-                  תצוגה מקדימה
+                  תצוגה
                 </Link>
               </Button>
             )}
 
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => handleSave()}
               disabled={saving}
-              className="rounded-xl gap-1.5 h-8 text-xs"
+              className="rounded-xl gap-1.5 h-8 text-xs text-white/80 hover:text-white hover:bg-white/10 border border-white/20"
             >
               {saving ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -300,7 +327,11 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
               size="sm"
               onClick={() => handleSave(!isPublished)}
               disabled={publishing}
-              className="rounded-xl gap-1.5 h-8 text-xs"
+              className={`rounded-xl gap-1.5 h-8 text-xs ${
+                isPublished
+                  ? "bg-white/15 text-white hover:bg-white/20 border border-white/20"
+                  : "bg-amarel-gradient text-white hover:opacity-90 border-0 shadow-sm"
+              }`}
             >
               {publishing ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -497,13 +528,13 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
           <div className="space-y-2 my-2">
             {[
-              { icon: "👤", label: "שם מלא", desc: "טקסט" },
-              { icon: "🪪", label: "תעודת זהות", desc: "טקסט" },
-              { icon: "🏢", label: "חטיבה", desc: "רשימה נפתחת" },
-              { icon: "↔️", label: "כניסה / יציאה", desc: "לחצן בחירה" },
+              { icon: <User className="h-4 w-4 text-neutral-500" />, label: "שם מלא", desc: "טקסט" },
+              { icon: <CreditCard className="h-4 w-4 text-neutral-500" />, label: "תעודת זהות", desc: "טקסט" },
+              { icon: <Building2 className="h-4 w-4 text-neutral-500" />, label: "חטיבה", desc: "רשימה נפתחת" },
+              { icon: <ArrowLeftRight className="h-4 w-4 text-blue-500" />, label: "כניסה / יציאה", desc: "לחצן בחירה" },
             ].map((f) => (
               <div key={f.label} className="flex items-center gap-3 bg-neutral-50 rounded-xl p-3">
-                <span className="text-base">{f.icon}</span>
+                <span className="shrink-0">{f.icon}</span>
                 <div>
                   <p className="text-sm font-medium text-neutral-800">{f.label}</p>
                   <p className="text-xs text-neutral-400">{f.desc}</p>

@@ -49,7 +49,13 @@ export default function RootLayout({
         className={`${googleSans.variable} min-h-screen antialiased`}
       >
         {children}
-        <Toaster richColors position="bottom-left" />
+        <Toaster
+          richColors
+          position="top-left"
+          dir="rtl"
+          closeButton
+          toastOptions={{ classNames: { toast: "font-[var(--font-google-sans)]" } }}
+        />
       </body>
     </html>
   )

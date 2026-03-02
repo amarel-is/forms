@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, X, ImageIcon } from "lucide-react"
+import { Plus, X, ImageIcon, LogIn, LogOut } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -232,11 +232,13 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
             />
           </div>
           <div className="flex gap-2">
-            <div className="flex-1 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-center">
-              <span className="text-sm font-semibold text-green-700">✅ כניסה</span>
+            <div className="flex-1 bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center justify-center gap-2">
+              <LogIn className="h-4 w-4 text-green-600 shrink-0" strokeWidth={2} />
+              <span className="text-sm font-semibold text-green-700">כניסה</span>
             </div>
-            <div className="flex-1 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-center">
-              <span className="text-sm font-semibold text-red-700">🚪 יציאה</span>
+            <div className="flex-1 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center justify-center gap-2">
+              <LogOut className="h-4 w-4 text-red-600 shrink-0" strokeWidth={2} />
+              <span className="text-sm font-semibold text-red-700">יציאה</span>
             </div>
           </div>
           <p className="text-xs text-neutral-400 text-center">המשיב יבחר בין כניסה ליציאה</p>
