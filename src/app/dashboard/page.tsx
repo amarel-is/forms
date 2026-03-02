@@ -1,17 +1,16 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Plus, LogOut } from "lucide-react"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FormCard } from "@/components/dashboard/form-card"
 import { EmptyState } from "@/components/dashboard/empty-state"
-import { AmarelLogo, AmarelNavBar } from "@/components/layout/amarel-nav"
-import { NotificationBell } from "@/components/notifications/notification-bell"
+import { AppHeader } from "@/components/layout/amarel-nav"
 import { createClient } from "@/lib/supabase/server"
 import { rowToForm } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
-export const metadata: Metadata = { title: "לוח בקרה" }
+export const metadata: Metadata = { title: "הטפסים שלי" }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getFormsWithCounts(supabase: any, userId: string) {
@@ -53,40 +52,11 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <AmarelNavBar>
-        <AmarelLogo />
-
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-white/50 hidden sm:block me-2" dir="ltr">
-            {user.email}
-          </span>
-
-          {/* Real-time notification bell */}
-          <NotificationBell userId={user.id} />
-
-          {/* Sign out */}
-          <form
-            action={async () => {
-              "use server"
-              const { createClient: create } = await import("@/lib/supabase/server")
-              const client = await create()
-              await client.auth.signOut()
-              const { redirect: redir } = await import("next/navigation")
-              redir("/login")
-            }}
-          >
-            <Button
-              type="submit"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-xl text-white/80 hover:text-white hover:bg-white/10"
-              title="יציאה"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </form>
-        </div>
-      </AmarelNavBar>
+      <AppHeader
+        userId={user.id}
+        userEmail={user.email ?? undefined}
+        activePath="dashboard"
+      />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
@@ -102,7 +72,7 @@ export default async function DashboardPage() {
           {formsWithCounts.length > 0 && (
             <Button
               asChild
-              className="rounded-xl gap-2 h-9 bg-amarel-gradient text-white hover:opacity-90 border-0 shadow-sm"
+              className="rounded-xl gap-2 h-9 bg-orange-600 hover:bg-orange-500 text-white border-0 shadow-sm"
             >
               <Link href="/forms/new">
                 <Plus className="h-4 w-4" />

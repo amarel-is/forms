@@ -102,7 +102,7 @@ export default async function PublicFillPage({ params }: Props) {
         {/* Branding */}
         <p className="text-center text-xs text-neutral-400 mt-5">
           מופעל על ידי{" "}
-          <span className="font-medium text-neutral-600">FormCraft</span>
+          <span className="font-medium text-neutral-600">אמרל טפסים</span>
         </p>
       </div>
     </div>

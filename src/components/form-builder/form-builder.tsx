@@ -223,14 +223,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   return (
     <>
       <div className="flex flex-col h-screen bg-neutral-50">
-        {/* Header — Amarel branded dark nav */}
-        <header
-          className="shrink-0 border-b px-4 sm:px-6 h-14 flex items-center justify-between gap-4"
-          style={{
-            backgroundColor: "var(--amarel-nav)",
-            borderBottomColor: "var(--amarel-nav-border)",
-          }}
-        >
+        {/* Header — Amarel dark nav */}
+        <header className="shrink-0 bg-[#2D4458] border-b border-[rgba(148,163,184,0.15)] px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
@@ -243,11 +237,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
               </Link>
             </Button>
 
-            <div className="hidden sm:block">
-              <AmarelLogo size="sm" />
-            </div>
+            <AmarelLogo size="sm" />
 
-            <div className="w-px h-5 bg-white/20 hidden sm:block" />
+            <div className="w-px h-5 bg-white/20 shrink-0" />
 
             <div className="flex items-center gap-2 min-w-0">
               <Input
@@ -330,7 +322,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
               className={`rounded-xl gap-1.5 h-8 text-xs ${
                 isPublished
                   ? "bg-white/15 text-white hover:bg-white/20 border border-white/20"
-                  : "bg-amarel-gradient text-white hover:opacity-90 border-0 shadow-sm"
+                  : "bg-orange-600 hover:bg-orange-500 text-white border-0 shadow-sm"
               }`}
             >
               {publishing ? (
