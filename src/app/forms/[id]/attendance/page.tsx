@@ -223,22 +223,22 @@ export default async function AttendancePage({ params, searchParams }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-neutral-50">
-                    <TableHead className="text-xs font-semibold text-neutral-500 w-28">שעה</TableHead>
+                    <TableHead className="text-xs font-semibold text-neutral-500 w-28 text-right">שעה</TableHead>
                     {nameField && (
-                      <TableHead className="text-xs font-semibold text-neutral-500">שם</TableHead>
+                      <TableHead className="text-xs font-semibold text-neutral-500 text-right">שם</TableHead>
                     )}
                     {idField && (
-                      <TableHead className="text-xs font-semibold text-neutral-500 hidden sm:table-cell">
+                      <TableHead className="text-xs font-semibold text-neutral-500 hidden sm:table-cell text-right">
                         ת.ז
                       </TableHead>
                     )}
                     {divField && (
-                      <TableHead className="text-xs font-semibold text-neutral-500 hidden md:table-cell">
+                      <TableHead className="text-xs font-semibold text-neutral-500 hidden md:table-cell text-right">
                         חטיבה
                       </TableHead>
                     )}
                     {dirField && (
-                      <TableHead className="text-xs font-semibold text-neutral-500 w-24 text-center">
+                      <TableHead className="text-xs font-semibold text-neutral-500 w-24 text-right">
                         סטטוס
                       </TableHead>
                     )}
@@ -250,29 +250,29 @@ export default async function AttendancePage({ params, searchParams }: Props) {
                     const isEntry = dir === "כניסה"
                     return (
                       <TableRow key={r.id} className="hover:bg-neutral-50">
-                        <TableCell className="text-xs text-neutral-500 font-mono">
+                        <TableCell className="text-xs text-neutral-500 font-mono text-right">
                           {new Date(r.submitted_at).toLocaleTimeString("he-IL", {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
                         </TableCell>
                         {nameField && (
-                          <TableCell className="text-sm font-medium text-neutral-800">
+                          <TableCell className="text-sm font-medium text-neutral-800 text-right">
                             {getFieldValue(r, nameField.id)}
                           </TableCell>
                         )}
                         {idField && (
-                          <TableCell className="text-xs text-neutral-500 hidden sm:table-cell" dir="ltr">
+                          <TableCell className="text-xs text-neutral-500 hidden sm:table-cell text-right" dir="ltr">
                             {getFieldValue(r, idField.id)}
                           </TableCell>
                         )}
                         {divField && (
-                          <TableCell className="text-xs text-neutral-600 hidden md:table-cell">
+                          <TableCell className="text-xs text-neutral-600 hidden md:table-cell text-right">
                             {getFieldValue(r, divField.id)}
                           </TableCell>
                         )}
                         {dirField && (
-                          <TableCell className="text-center">
+                          <TableCell className="text-right">
                             <span
                               className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${
                                 isEntry

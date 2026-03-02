@@ -54,7 +54,7 @@ export default function RootLayout({
     <html lang="he" dir="rtl" suppressHydrationWarning>
       <body className={`${googleSans.variable} min-h-screen antialiased`}>
         {children}
-        <Toaster closeButton />
+        <Toaster />
       </body>
     </html>
   )

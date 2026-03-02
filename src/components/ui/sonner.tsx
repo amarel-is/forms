@@ -23,15 +23,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "data-[type=warning]:border-amber-200 data-[type=warning]:bg-amber-50",
             "data-[type=info]:border-blue-200 data-[type=info]:bg-blue-50",
           ].join(" "),
+          content: "flex-1 min-w-0",
           title: "text-sm font-semibold leading-snug text-right",
           description: "text-xs text-neutral-500 mt-0.5 text-right",
           icon: "shrink-0",
-          closeButton: [
-            "!static !translate-x-0 !translate-y-0 ms-auto",
-            "text-neutral-400 hover:text-neutral-600 transition-colors",
-            "rounded-md p-0.5 hover:bg-neutral-100",
-            "border-0 !bg-transparent !shadow-none",
-          ].join(" "),
           actionButton:
             "text-xs font-semibold bg-neutral-900 text-white rounded-lg px-3 py-1.5 hover:bg-neutral-700 transition-colors",
           cancelButton:
