@@ -1,4 +1,5 @@
-import { Metadata } from "next"
+import type { Metadata } from "next"
+import Image from "next/image"
 import LoginForm from "./login-form"
 
 export const dynamic = "force-dynamic"
@@ -13,13 +14,16 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Brand header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-1.5 mb-3">
-            <span className="text-3xl font-bold text-[#2D4458]">אמרל</span>
-            <span className="text-neutral-300 text-xl">|</span>
-            <span className="text-xl font-normal text-neutral-500">טפסים</span>
-          </div>
+          <Image
+            src="/logos/amarel.png"
+            alt="Amarel"
+            width={180}
+            height={60}
+            priority
+            className="mb-2"
+          />
           <p className="text-sm text-neutral-400">
-            מערכת טפסים ומשאלות פנים-ארגונית
+            מערכת טפסים וסקרים
           </p>
         </div>
 
