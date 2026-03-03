@@ -1,7 +1,10 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
-import { Plus, X, ImageIcon, LogIn, LogOut, Link2, PenLine, Upload, Loader2 } from "lucide-react"
+import {
+  Plus, X, ImageIcon, LogIn, LogOut, Link2, PenLine,
+  Upload, Loader2, Star,
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,6 +12,13 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   isLayoutField,
   type FieldConfig,
@@ -18,9 +28,14 @@ import { VALIDATION_PRESETS } from "@/lib/field-validation"
 import { uploadFormImage } from "@/lib/actions/storage"
 
 const TYPE_LABEL: Record<FieldConfig["type"], string> = {
-  text: "טקסט",
+  text: "תשובה קצרה",
+  long_answer: "תשובה ארוכה",
+  number: "מספר",
+  date: "תאריך",
   dropdown: "רשימה נפתחת",
   multiselect: "בחירה מרובה",
+  checkbox: "צ'קבוקס",
+  star_rating: "דירוג כוכבים",
   entry_exit: "כניסה / יציאה",
   signature: "חתימה",
   heading: "כותרת ראשית",
@@ -74,7 +89,15 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
 
   function removeOption(index: number) {
     const options = (field.options ?? []).filter((_, i) => i !== index)
-    update({ options })
+    // Also clear default_value if it was this option
+    const removed = field.options?.[index]
+    const newDefault =
+      typeof field.default_value === "string" && field.default_value === removed
+        ? undefined
+        : Array.isArray(field.default_value)
+        ? (field.default_value as string[]).filter((v) => v !== removed)
+        : field.default_value
+    update({ options, default_value: newDefault })
   }
 
   function handleOptionKeyDown(e: React.KeyboardEvent) {
@@ -84,7 +107,20 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
     }
   }
 
+  function toggleMultiselectDefault(opt: string) {
+    const current = (field.default_value as string[]) ?? []
+    const next = current.includes(opt)
+      ? current.filter((v) => v !== opt)
+      : [...current, opt]
+    update({ default_value: next.length > 0 ? next : undefined })
+  }
+
   const hasOptions = field.type === "dropdown" || field.type === "multiselect"
+
+  // ── Sections that have a default-value control ────────────────────────────
+  const hasDefaultValue =
+    !layout &&
+    !["entry_exit", "signature", "star_rating"].includes(field.type)
 
   return (
     <div className="flex flex-col gap-5">
@@ -228,8 +264,6 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
               className="h-9 rounded-xl text-sm"
             />
           </div>
-
-          {/* Preview */}
           {field.content && (
             <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100 text-center space-y-1">
               <div className="flex items-center justify-center gap-1.5">
@@ -259,16 +293,13 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
               className="h-9 rounded-xl text-sm"
             />
           </div>
-
           <div className="bg-neutral-50 rounded-xl border border-neutral-200 overflow-hidden">
             <div className="h-28 flex flex-col items-center justify-center gap-2 text-neutral-300">
               <PenLine className="h-7 w-7" />
               <span className="text-xs">שטח חתימה — יופיע בטופס</span>
             </div>
           </div>
-
           <Separator />
-
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-neutral-700">שדה חובה</p>
@@ -285,7 +316,6 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
 
       {field.type === "image" && (
         <>
-          {/* Upload area */}
           <div className="space-y-2">
             <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
               העלאת תמונה
@@ -317,8 +347,6 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
               <p className="text-xs text-red-500 text-right">{uploadError}</p>
             )}
           </div>
-
-          {/* Manual URL fallback */}
           <div className="space-y-2">
             <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
               או הכנס כתובת URL
@@ -331,7 +359,6 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
               dir="ltr"
             />
           </div>
-
           <div className="space-y-2">
             <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
               טקסט חלופי (Alt)
@@ -343,8 +370,6 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
               className="h-9 rounded-xl text-sm"
             />
           </div>
-
-          {/* Preview */}
           <div className="bg-neutral-50 rounded-xl border border-neutral-100 overflow-hidden">
             {(field.content ?? "").length > 4 ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -409,13 +434,17 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
             <Input
               value={field.label}
               onChange={(e) => update({ label: e.target.value })}
-              placeholder="לדוגמה: מה שמך?"
+              placeholder={
+                field.type === "checkbox"
+                  ? "לדוגמה: אני מסכים לתנאי השימוש"
+                  : "לדוגמה: מה שמך?"
+              }
               className="h-9 rounded-xl text-sm"
             />
           </div>
 
-          {/* Placeholder (text only) */}
-          {field.type === "text" && (
+          {/* Placeholder — text, long_answer, number */}
+          {(field.type === "text" || field.type === "long_answer" || field.type === "number") && (
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
                 טקסט כוונון
@@ -429,14 +458,59 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
             </div>
           )}
 
+          {/* Number: min / max / step */}
+          {field.type === "number" && (
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
+                טווח ערכים
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <p className="text-[11px] text-neutral-400 text-center">מינימום</p>
+                  <Input
+                    type="number"
+                    value={field.min ?? ""}
+                    onChange={(e) =>
+                      update({ min: e.target.value !== "" ? Number(e.target.value) : undefined })
+                    }
+                    placeholder="—"
+                    className="h-9 rounded-xl text-sm text-center"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] text-neutral-400 text-center">מקסימום</p>
+                  <Input
+                    type="number"
+                    value={field.max ?? ""}
+                    onChange={(e) =>
+                      update({ max: e.target.value !== "" ? Number(e.target.value) : undefined })
+                    }
+                    placeholder="—"
+                    className="h-9 rounded-xl text-sm text-center"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] text-neutral-400 text-center">צעד</p>
+                  <Input
+                    type="number"
+                    value={field.step ?? ""}
+                    onChange={(e) =>
+                      update({ step: e.target.value !== "" ? Number(e.target.value) : undefined })
+                    }
+                    placeholder="1"
+                    className="h-9 rounded-xl text-sm text-center"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Validation (text only) */}
           {field.type === "text" && (
             <div className="space-y-2">
               <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
                 ולידציה
               </Label>
-
-              {/* Validation type selector */}
               <div className="grid grid-cols-1 gap-1.5">
                 {(
                   [
@@ -449,8 +523,7 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
                   ] as TextValidationType[]
                 ).map((vtype) => {
                   const preset = VALIDATION_PRESETS[vtype]
-                  const isActive =
-                    (field.validation?.type ?? "none") === vtype
+                  const isActive = (field.validation?.type ?? "none") === vtype
                   return (
                     <button
                       key={vtype}
@@ -492,8 +565,6 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
                   )
                 })}
               </div>
-
-              {/* Custom regex input */}
               {field.validation?.type === "custom_regex" && (
                 <div className="space-y-1.5 pt-1">
                   <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
@@ -533,7 +604,7 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
             </div>
           )}
 
-          {/* Options */}
+          {/* Options (dropdown / multiselect) */}
           {hasOptions && (
             <div className="space-y-2">
               <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
@@ -549,6 +620,7 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
                     >
                       <span className="flex-1 text-sm text-neutral-700 truncate">{opt}</span>
                       <button
+                        type="button"
                         onClick={() => removeOption(i)}
                         className="text-neutral-300 hover:text-red-500 transition-colors"
                       >
@@ -580,6 +652,168 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
               {(field.options ?? []).length === 0 && (
                 <p className="text-xs text-neutral-400">לחץ Enter או + להוספת אפשרויות</p>
               )}
+
+              {/* Allow other — dropdown only */}
+              {field.type === "dropdown" && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700">אפשרות &quot;אחר&quot;</p>
+                    <p className="text-xs text-neutral-400">מאפשר למשיב לרשום ערך חופשי</p>
+                  </div>
+                  <Checkbox
+                    checked={field.allow_other ?? false}
+                    onCheckedChange={(checked) =>
+                      update({ allow_other: checked === true ? true : undefined })
+                    }
+                    className="rounded-md"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Default value ──────────────────────────────────────────── */}
+          {hasDefaultValue && (
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
+                ערך ברירת מחדל
+              </Label>
+
+              {/* text / long_answer */}
+              {(field.type === "text" || field.type === "long_answer") && (
+                <Input
+                  value={(field.default_value as string) ?? ""}
+                  onChange={(e) =>
+                    update({ default_value: e.target.value || undefined })
+                  }
+                  placeholder="ערך שיופיע מראש…"
+                  className="h-9 rounded-xl text-sm"
+                />
+              )}
+
+              {/* number */}
+              {field.type === "number" && (
+                <Input
+                  type="number"
+                  value={(field.default_value as string) ?? ""}
+                  onChange={(e) =>
+                    update({ default_value: e.target.value || undefined })
+                  }
+                  placeholder="מספר ברירת מחדל…"
+                  className="h-9 rounded-xl text-sm"
+                  min={field.min}
+                  max={field.max}
+                />
+              )}
+
+              {/* date */}
+              {field.type === "date" && (
+                <input
+                  type="date"
+                  value={(field.default_value as string) ?? ""}
+                  onChange={(e) =>
+                    update({ default_value: e.target.value || undefined })
+                  }
+                  className="w-full h-9 rounded-xl border border-input px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-1"
+                  dir="ltr"
+                />
+              )}
+
+              {/* dropdown — only show when options exist */}
+              {field.type === "dropdown" && (field.options ?? []).length > 0 && (
+                <Select
+                  value={(field.default_value as string) ?? "__none__"}
+                  onValueChange={(v) =>
+                    update({ default_value: v === "__none__" ? undefined : v })
+                  }
+                  dir="rtl"
+                >
+                  <SelectTrigger className="h-9 rounded-xl text-sm">
+                    <SelectValue placeholder="ללא ברירת מחדל" />
+                  </SelectTrigger>
+                  <SelectContent dir="rtl">
+                    <SelectItem value="__none__" className="text-neutral-400 italic">
+                      ללא ברירת מחדל
+                    </SelectItem>
+                    {(field.options ?? []).map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* multiselect — only show when options exist */}
+              {field.type === "multiselect" && (field.options ?? []).length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  {(field.options ?? []).map((opt) => {
+                    const checkId = `default-ms-${field.id}-${opt}`
+                    const selected = ((field.default_value as string[]) ?? []).includes(opt)
+                    return (
+                      <label
+                        key={opt}
+                        htmlFor={checkId}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-neutral-50 cursor-pointer"
+                      >
+                        <Checkbox
+                          id={checkId}
+                          checked={selected}
+                          onCheckedChange={() => toggleMultiselectDefault(opt)}
+                          className="h-4 w-4 rounded"
+                        />
+                        <span className="text-sm text-neutral-700">{opt}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* checkbox */}
+              {field.type === "checkbox" && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-100">
+                  <Checkbox
+                    checked={field.default_value === true}
+                    onCheckedChange={(checked) =>
+                      update({ default_value: checked === true ? true : undefined })
+                    }
+                    className="h-4 w-4 rounded"
+                  />
+                  <span className="text-sm text-neutral-600">מסומן כברירת מחדל</span>
+                </div>
+              )}
+
+              {/* Star rating default */}
+              {field.type === "star_rating" && (
+                <div className="flex gap-1" dir="ltr">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const active = star <= (parseInt(field.default_value as string) || 0)
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() =>
+                          update({
+                            default_value:
+                              field.default_value === String(star)
+                                ? undefined
+                                : String(star),
+                          })
+                        }
+                        className="p-0.5 transition-transform hover:scale-110 focus:outline-none"
+                      >
+                        <Star
+                          className={`h-6 w-6 transition-colors ${
+                            active
+                              ? "fill-amber-400 text-amber-400"
+                              : "fill-transparent text-neutral-300"
+                          }`}
+                        />
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -589,7 +823,11 @@ export function FieldEditorPanel({ field, onChange }: FieldEditorPanelProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-neutral-700">שדה חובה</p>
-              <p className="text-xs text-neutral-400">המשיבים חייבים לענות על שדה זה</p>
+              <p className="text-xs text-neutral-400">
+                {field.type === "checkbox"
+                  ? "המשיב חייב לסמן את התיבה"
+                  : "המשיבים חייבים לענות על שדה זה"}
+              </p>
             </div>
             <Checkbox
               checked={field.required}

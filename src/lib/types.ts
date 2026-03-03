@@ -1,7 +1,17 @@
 // ─── Field types ─────────────────────────────────────────────────────────────
 
 /** Input fields — collect user answers */
-export type InputFieldType = "text" | "dropdown" | "multiselect" | "entry_exit" | "signature"
+export type InputFieldType =
+  | "text"
+  | "long_answer"
+  | "dropdown"
+  | "multiselect"
+  | "checkbox"
+  | "number"
+  | "date"
+  | "star_rating"
+  | "entry_exit"
+  | "signature"
 
 /** Layout/visual fields — display only, no answer collected */
 export type LayoutFieldType = "heading" | "subheading" | "paragraph" | "divider" | "image" | "link"
@@ -52,6 +62,11 @@ export interface FieldConfig {
   placeholder?: string
   required: boolean               // only meaningful for input fields
   options?: string[]              // dropdown & multiselect only
+  allow_other?: boolean           // dropdown only — adds "Other + please specify"
+  default_value?: string | string[] | boolean  // pre-filled value shown to the user
+  min?: number                    // number field: minimum value
+  max?: number                    // number field: maximum value
+  step?: number                   // number field: step increment
   content?: string                // paragraph body text; image URL alternative
   validation?: FieldValidation    // text field validation rule
   attendance_role?: "id_number" | "name" | "division" | "direction"

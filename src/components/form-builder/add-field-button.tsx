@@ -3,12 +3,16 @@
 import {
   Plus,
   Type,
+  AlignLeft,
   ChevronDown,
   ListChecks,
+  CheckSquare,
+  Hash,
+  CalendarDays,
+  Star,
   ArrowLeftRight,
   Heading1,
   Heading2,
-  AlignLeft,
   Minus,
   ImageIcon,
   Link2,
@@ -33,9 +37,27 @@ const INPUT_FIELD_TYPES: {
 }[] = [
   {
     type: "text",
-    label: "טקסט",
+    label: "תשובה קצרה",
     icon: <Type className="h-4 w-4" />,
-    description: "תשובה קצרה או ארוכה",
+    description: "שורה אחת של טקסט",
+  },
+  {
+    type: "long_answer",
+    label: "תשובה ארוכה",
+    icon: <AlignLeft className="h-4 w-4" />,
+    description: "תיבת טקסט מרובת שורות",
+  },
+  {
+    type: "number",
+    label: "מספר",
+    icon: <Hash className="h-4 w-4" />,
+    description: "קלט מספרי עם min/max",
+  },
+  {
+    type: "date",
+    label: "תאריך",
+    icon: <CalendarDays className="h-4 w-4" />,
+    description: "בחירת תאריך",
   },
   {
     type: "dropdown",
@@ -48,6 +70,18 @@ const INPUT_FIELD_TYPES: {
     label: "בחירה מרובה",
     icon: <ListChecks className="h-4 w-4" />,
     description: "בחירת מספר אפשרויות",
+  },
+  {
+    type: "checkbox",
+    label: "צ'קבוקס",
+    icon: <CheckSquare className="h-4 w-4" />,
+    description: "אישור הצהרה / בחירה בוליאנית",
+  },
+  {
+    type: "star_rating",
+    label: "דירוג כוכבים",
+    icon: <Star className="h-4 w-4" />,
+    description: "דירוג 1–5 כוכבים",
   },
   {
     type: "signature",

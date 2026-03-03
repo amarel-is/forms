@@ -5,8 +5,13 @@ import { toast } from "sonner"
 import { Loader2, CheckCircle2, LogIn, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TextField } from "./fields/text-field"
+import { LongAnswerField } from "./fields/long-answer-field"
 import { DropdownField } from "./fields/dropdown-field"
 import { MultiSelectField } from "./fields/multiselect-field"
+import { CheckboxField } from "./fields/checkbox-field"
+import { NumberField } from "./fields/number-field"
+import { DateField } from "./fields/date-field"
+import { StarRatingField } from "./fields/star-rating-field"
 import { EntryExitField } from "./fields/entry-exit-field"
 import {
   HeadingElement,
@@ -37,7 +42,19 @@ export function FormRenderer({ form }: FormRendererProps) {
   const [values, setValues] = useState<FormValues>(() => {
     const initial: FormValues = {}
     inputFields.forEach((f) => {
-      initial[f.id] = f.type === "multiselect" ? [] : ""
+      if (f.default_value !== undefined) {
+        if (f.type === "multiselect") {
+          initial[f.id] = Array.isArray(f.default_value)
+            ? (f.default_value as string[])
+            : []
+        } else if (f.type === "checkbox") {
+          initial[f.id] = f.default_value === true ? "true" : ""
+        } else {
+          initial[f.id] = String(f.default_value)
+        }
+      } else {
+        initial[f.id] = f.type === "multiselect" ? [] : ""
+      }
     })
     return initial
   })
@@ -70,9 +87,24 @@ export function FormRenderer({ form }: FormRendererProps) {
         if (f.type === "multiselect") {
           if ((val as string[]).length === 0)
             newErrors[f.id] = "אנא בחר לפחות אפשרות אחת"
+        } else if (f.type === "checkbox") {
+          if (val !== "true")
+            newErrors[f.id] = "יש לסמן תיבה זו כדי להמשיך"
         } else {
           if (!val || (val as string).trim() === "")
             newErrors[f.id] = "שדה זה הוא חובה"
+        }
+      }
+
+      // Number range validation
+      if (f.type === "number" && val && (val as string).trim() !== "") {
+        const num = Number(val)
+        if (Number.isNaN(num)) {
+          newErrors[f.id] = "יש להזין מספר תקין"
+        } else if (f.min !== undefined && num < f.min) {
+          newErrors[f.id] = `הערך המינימלי הוא ${f.min}`
+        } else if (f.max !== undefined && num > f.max) {
+          newErrors[f.id] = `הערך המקסימלי הוא ${f.max}`
         }
       }
 
@@ -225,29 +257,34 @@ function FieldRenderer({
 
   // Input fields
   if (field.type === "text") {
-    return (
-      <TextField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
-    )
+    return <TextField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
+  }
+  if (field.type === "long_answer") {
+    return <LongAnswerField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
+  }
+  if (field.type === "number") {
+    return <NumberField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
+  }
+  if (field.type === "date") {
+    return <DateField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
   }
   if (field.type === "dropdown") {
-    return (
-      <DropdownField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
-    )
+    return <DropdownField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
   }
   if (field.type === "multiselect") {
-    return (
-      <MultiSelectField field={field} value={value as string[]} onChange={(v) => onChange(v)} error={error} />
-    )
+    return <MultiSelectField field={field} value={value as string[]} onChange={(v) => onChange(v)} error={error} />
+  }
+  if (field.type === "checkbox") {
+    return <CheckboxField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
+  }
+  if (field.type === "star_rating") {
+    return <StarRatingField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
   }
   if (field.type === "entry_exit") {
-    return (
-      <EntryExitField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
-    )
+    return <EntryExitField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
   }
   if (field.type === "signature") {
-    return (
-      <SignatureField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
-    )
+    return <SignatureField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
   }
   return null
 }

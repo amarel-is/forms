@@ -124,16 +124,17 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
   function addField(type: FieldType) {
     const layout = isLayoutField(type)
+    const noPlaceholderTypes = new Set([
+      "entry_exit", "dropdown", "multiselect", "checkbox", "star_rating", "date",
+    ])
     const newField: FieldConfig = {
       id: nanoid(),
       type,
       label: "",
       required: false,
-      // Only add placeholder for text input fields
-      ...(!layout && type !== "entry_exit" && type !== "dropdown" && type !== "multiselect"
-        ? { placeholder: "" }
-        : {}),
-      // Only add options for select fields
+      // Placeholder for text-like fields only
+      ...(!layout && !noPlaceholderTypes.has(type) ? { placeholder: "" } : {}),
+      // Options for select fields
       ...(type === "dropdown" || type === "multiselect" ? { options: [] } : {}),
     }
     setFields((prev) => [...prev, newField])
