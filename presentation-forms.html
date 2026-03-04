@@ -56,7 +56,7 @@
       pointer-events: none;
     }
     .hero-content { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; }
-    .hero-logo { height: 72px; margin-bottom: 36px; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.35)); }
+    .hero-logo { display: block; height: 72px; margin: 0 auto 36px; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.35)); }
     .hero-eyebrow {
       display: inline-flex; align-items: center; gap: 8px;
       background: rgba(249,115,22,0.2); border: 1px solid rgba(249,115,22,0.35);
@@ -294,13 +294,15 @@
     .tech-grid { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin-top: 12px; }
     .tech-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .tech-logo {
-      width: 64px; height: 64px; background: white; border-radius: 16px;
-      display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+      width: 72px; height: 72px; background: white; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08); border: 1px solid var(--border);
-      transition: all 0.2s;
+      transition: all 0.25s ease;
     }
-    .tech-logo:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
-    .tech-name { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+    .tech-logo img { width: 36px; height: 36px; object-fit: contain; }
+    .tech-logo svg { width: 36px; height: 36px; }
+    .tech-logo:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(0,0,0,0.13); border-color: #CBD5E1; }
+    .tech-name { font-size: 0.8rem; font-weight: 600; color: #64748B; text-align: center; }
 
     /* ====== WORKFLOW ====== */
     .workflow { display: flex; align-items: stretch; gap: 0; }
@@ -331,11 +333,8 @@
       background: var(--sidebar-dark); color: white;
       padding: 48px 0 40px; text-align: center;
     }
-    footer .footer-logo { height: 40px; margin-bottom: 20px; opacity: 0.85; }
-    footer p { opacity: 0.6; font-size: 0.9rem; margin-bottom: 6px; }
-    footer .footer-links { display: flex; justify-content: center; gap: 32px; margin-top: 20px; }
-    footer .footer-links a { color: rgba(255,255,255,0.6); font-size: 0.85rem; text-decoration: none; transition: color 0.2s; }
-    footer .footer-links a:hover { color: var(--orange); }
+    footer .footer-logo { display: block; height: 38px; margin: 0 auto 16px; opacity: 0.8; }
+    footer p { opacity: 0.55; font-size: 0.88rem; }
 
     /* ====== RESPONSIVE ====== */
     @media (max-width: 1024px) {
@@ -413,13 +412,14 @@
     <div class="hero-eyebrow">✨ פיתוח פנימי — בבעלות הארגון</div>
     <h1>מערכת <span>טפסים חכמה</span><br>לכל הארגון</h1>
     <p class="subtitle">בנייה, שיתוף, ניהול ואנליטיקה של טפסים — כולל מעקב נוכחות — במקום אחד</p>
-    <p class="sub2">פותחה על ידי צוות הטכנולוגיה של אמרל | 2025</p>
+    <p class="sub2">פותח על ידי Dolev Hayut | צוות הטכנולוגיה של אמרל | 2025</p>
     <div class="hero-badges">
       <div class="hero-badge"><span>📋</span> 16 סוגי שדות</div>
       <div class="hero-badge"><span>🔀</span> לוגיקה מותנית</div>
       <div class="hero-badge"><span>📊</span> אנליטיקה מובנית</div>
       <div class="hero-badge"><span>🏢</span> מעקב נוכחות</div>
-      <div class="hero-badge"><span>🔒</span> מאובטח ופרטי</div>
+      <div class="hero-badge"><span>🔒</span> מאושר CISO</div>
+      <div class="hero-badge"><span>🐙</span> GitHub ארגוני</div>
     </div>
   </div>
 </header>
@@ -1179,23 +1179,40 @@
       </div>
 
       <div class="animate d2">
-        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 20px; color: #334155;">🔐 אבטחה ופרטיות</h3>
+        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 20px; color: #334155;">🔐 אבטחה, קוד ופרטיות</h3>
         <div class="features-grid" style="grid-template-columns: 1fr; gap: 16px;">
+          <div class="feature-card" style="padding: 20px 24px; border-color: #22C55E; background: linear-gradient(135deg, #F0FDF4, #FFFFFF);">
+            <div style="display: flex; gap: 14px; align-items: flex-start;">
+              <div class="feature-icon fi-green" style="width: 44px; height: 44px; font-size: 1.2rem; flex-shrink: 0;">🛡️</div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <h3 style="font-size: 0.92rem;">אושר על ידי CISO חיצוני</h3>
+                  <span style="background: #16A34A; color: white; border-radius: 50px; padding: 1px 10px; font-size: 0.72rem; font-weight: 700;">✓ מאושר</span>
+                </div>
+                <p style="font-size: 0.83rem;">מסד הנתונים, ארכיטקטורת האבטחה ומדיניות הגישה עברו בדיקה ואישור של <strong>מנהל אבטחת מידע חיצוני (CISO)</strong> לפני העלייה לאוויר.</p>
+              </div>
+            </div>
+          </div>
+          <div class="feature-card" style="padding: 20px 24px; border-color: #1D4ED8; background: linear-gradient(135deg, #EFF6FF, #FFFFFF);">
+            <div style="display: flex; gap: 14px; align-items: flex-start;">
+              <div class="feature-icon fi-blue" style="width: 44px; height: 44px; flex-shrink: 0; padding: 8px;">
+                <img src="https://cdn.simpleicons.org/github/1D4ED8" alt="GitHub" style="width: 100%; height: 100%;">
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <h3 style="font-size: 0.92rem;">קוד שמור ב-GitHub הארגוני</h3>
+                  <span style="background: #1D4ED8; color: white; border-radius: 50px; padding: 1px 10px; font-size: 0.72rem; font-weight: 700;">Private Repo</span>
+                </div>
+                <p style="font-size: 0.83rem;">כל קוד המקור שמור ב-<strong>repository פרטי</strong> של ארגון אמרל ב-GitHub. גישה מבוקרת לפי הרשאות צוות — אין חשיפה לגורם חיצוני.</p>
+              </div>
+            </div>
+          </div>
           <div class="feature-card" style="padding: 20px 24px;">
             <div style="display: flex; gap: 14px; align-items: flex-start;">
               <div class="feature-icon fi-blue" style="width: 44px; height: 44px; font-size: 1.2rem; flex-shrink: 0;">🔑</div>
               <div>
                 <h3 style="font-size: 0.92rem;">Supabase Auth — SSR</h3>
                 <p style="font-size: 0.83rem;">אימות מבוסס סשן ב-server side. אין טוקן ב-client.</p>
-              </div>
-            </div>
-          </div>
-          <div class="feature-card" style="padding: 20px 24px;">
-            <div style="display: flex; gap: 14px; align-items: flex-start;">
-              <div class="feature-icon fi-green" style="width: 44px; height: 44px; font-size: 1.2rem; flex-shrink: 0;">🛡️</div>
-              <div>
-                <h3 style="font-size: 0.92rem;">נתונים לפי משתמש</h3>
-                <p style="font-size: 0.83rem;">כל טופס ותשובה מקושרים ל-user_id. אין גישה צולבת.</p>
               </div>
             </div>
           </div>
@@ -1224,46 +1241,92 @@
     </div>
 
     <div class="tech-grid animate">
+
+      <!-- Next.js -->
       <div class="tech-item">
-        <div class="tech-logo">⬛</div>
+        <div class="tech-logo">
+          <img src="https://cdn.simpleicons.org/nextdotjs/000000" alt="Next.js">
+        </div>
         <div class="tech-name">Next.js 15</div>
       </div>
+
+      <!-- TypeScript -->
       <div class="tech-item">
-        <div class="tech-logo">🟦</div>
+        <div class="tech-logo">
+          <img src="https://cdn.simpleicons.org/typescript/3178C6" alt="TypeScript">
+        </div>
         <div class="tech-name">TypeScript</div>
       </div>
+
+      <!-- Supabase -->
       <div class="tech-item">
-        <div class="tech-logo">🟩</div>
+        <div class="tech-logo">
+          <img src="https://cdn.simpleicons.org/supabase/3ECF8E" alt="Supabase">
+        </div>
         <div class="tech-name">Supabase</div>
       </div>
+
+      <!-- Tailwind CSS -->
       <div class="tech-item">
-        <div class="tech-logo">🎨</div>
+        <div class="tech-logo">
+          <img src="https://cdn.simpleicons.org/tailwindcss/06B6D4" alt="Tailwind CSS">
+        </div>
         <div class="tech-name">Tailwind CSS</div>
       </div>
+
+      <!-- React (shadcn/ui) -->
       <div class="tech-item">
-        <div class="tech-logo">🧩</div>
+        <div class="tech-logo">
+          <img src="https://cdn.simpleicons.org/react/61DAFB" alt="React / shadcn">
+        </div>
         <div class="tech-name">shadcn/ui</div>
       </div>
+
+      <!-- GitHub -->
       <div class="tech-item">
-        <div class="tech-logo">↕️</div>
+        <div class="tech-logo">
+          <img src="https://cdn.simpleicons.org/github/181717" alt="GitHub">
+        </div>
+        <div class="tech-name">GitHub</div>
+      </div>
+
+      <!-- VS Code -->
+      <div class="tech-item">
+        <div class="tech-logo">
+          <img src="https://cdn.simpleicons.org/visualstudiocode/007ACC" alt="VS Code">
+        </div>
+        <div class="tech-name">VS Code</div>
+      </div>
+
+      <!-- Radix UI (dnd-kit) -->
+      <div class="tech-item">
+        <div class="tech-logo">
+          <img src="https://cdn.simpleicons.org/radixui/161618" alt="dnd-kit">
+        </div>
         <div class="tech-name">dnd-kit</div>
       </div>
+
+      <!-- TipTap — custom styled badge -->
       <div class="tech-item">
-        <div class="tech-logo">📝</div>
+        <div class="tech-logo" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-color: #2d3561;">
+          <span style="font-family: 'Georgia', serif; font-weight: 900; font-size: 1.4rem; color: white; letter-spacing: -1px;">T²</span>
+        </div>
         <div class="tech-name">TipTap</div>
       </div>
+
+      <!-- Recharts -->
       <div class="tech-item">
-        <div class="tech-logo">📈</div>
+        <div class="tech-logo" style="background: linear-gradient(135deg, #EFF6FF, #FFFFFF); border-color: #BFDBFE;">
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Recharts"><title>Recharts</title>
+            <rect x="4" y="22" width="6" height="10" rx="2" fill="#3B82F6"/>
+            <rect x="13" y="14" width="6" height="18" rx="2" fill="#2563EB"/>
+            <rect x="22" y="8" width="6" height="24" rx="2" fill="#1D4ED8"/>
+            <path d="M7 20 L16 12 L25 6" stroke="#60A5FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <div class="tech-name">Recharts</div>
       </div>
-      <div class="tech-item">
-        <div class="tech-logo">🔔</div>
-        <div class="tech-name">Sonner</div>
-      </div>
-      <div class="tech-item">
-        <div class="tech-logo">🔗</div>
-        <div class="tech-name">Short.io</div>
-      </div>
+
     </div>
 
     <div class="highlight-box animate d2" style="margin-top: 40px;">
@@ -1273,6 +1336,90 @@
         <strong>בבעלות מלאה של אמרל</strong>. אין שיתוף מידע עם צד שלישי.
       </p>
     </div>
+  </div>
+</section>
+
+<!-- ====== TRUST & GOVERNANCE ====== -->
+<section>
+  <div class="container">
+    <div class="section-header">
+      <h2>אמינות, <span>שקיפות</span> ואבטחה</h2>
+      <p>המערכת עברה תהליך פיתוח מקצועי ומבוקר — מהקוד ועד מסד הנתונים</p>
+      <div class="section-divider"></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;">
+
+      <!-- GitHub -->
+      <div style="background: white; border-radius: 20px; border: 2px solid #1D4ED8; padding: 36px 28px; text-align: center; position: relative; overflow: hidden; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 20px 48px rgba(29,78,216,0.12)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #1D4ED8, #3B82F6);"></div>
+        <div style="width: 80px; height: 80px; background: rgba(29,78,216,0.07); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+          <img src="https://cdn.simpleicons.org/github/1D4ED8" alt="GitHub" style="width: 44px; height: 44px;">
+        </div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;">GitHub ארגוני</h3>
+        <div style="display: inline-block; background: #EFF6FF; color: #1D4ED8; border-radius: 50px; padding: 4px 16px; font-size: 0.8rem; font-weight: 700; margin-bottom: 16px; border: 1px solid rgba(29,78,216,0.2);">Private Repository</div>
+        <p style="font-size: 0.9rem; color: #475569; line-height: 1.75;">כל קוד המקור שמור ב-<strong>repo פרטי ומוגן</strong> תחת חשבון הארגון ב-GitHub.<br>היסטוריית שינויים מלאה, code review, ו-branch protection.</p>
+        <div style="margin-top: 20px; padding: 14px; background: #F8FAFC; border-radius: 10px; font-size: 0.82rem; color: #64748B; border: 1px solid #E2E8F0;">
+          🔐 גישה לפי הרשאת צוות בלבד
+        </div>
+      </div>
+
+      <!-- CISO -->
+      <div style="background: white; border-radius: 20px; border: 2px solid #16A34A; padding: 36px 28px; text-align: center; position: relative; overflow: hidden; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 20px 48px rgba(22,163,74,0.12)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #16A34A, #22C55E);"></div>
+        <div style="width: 80px; height: 80px; background: rgba(22,163,74,0.07); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.4rem; margin: 0 auto 20px;">🛡️</div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;">אושר CISO חיצוני</h3>
+        <div style="display: inline-block; background: #F0FDF4; color: #16A34A; border-radius: 50px; padding: 4px 16px; font-size: 0.8rem; font-weight: 700; margin-bottom: 16px; border: 1px solid rgba(22,163,74,0.25);">✓ Security Approved</div>
+        <p style="font-size: 0.9rem; color: #475569; line-height: 1.75;">מסד הנתונים, ארכיטקטורת האבטחה ומדיניות הגישה <strong>עברו בדיקה מלאה ואושרו</strong> על ידי מנהל אבטחת מידע (CISO) חיצוני ובלתי-תלוי.</p>
+        <div style="margin-top: 20px; padding: 14px; background: #F0FDF4; border-radius: 10px; font-size: 0.82rem; color: #15803D; border: 1px solid rgba(22,163,74,0.2);">
+          ✅ בדיקת RLS, הצפנה, והרשאות — עברה
+        </div>
+      </div>
+
+      <!-- VS Code -->
+      <div style="background: white; border-radius: 20px; border: 2px solid #0EA5E9; padding: 36px 28px; text-align: center; position: relative; overflow: hidden; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 20px 48px rgba(14,165,233,0.12)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #0EA5E9, #38BDF8);"></div>
+        <div style="width: 80px; height: 80px; background: rgba(14,165,233,0.07); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+          <img src="https://cdn.simpleicons.org/visualstudiocode/007ACC" alt="VS Code" style="width: 44px; height: 44px;">
+        </div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;">Visual Studio Code</h3>
+        <div style="display: inline-block; background: #F0F9FF; color: #0369A1; border-radius: 50px; padding: 4px 16px; font-size: 0.8rem; font-weight: 700; margin-bottom: 16px; border: 1px solid rgba(14,165,233,0.25);">Microsoft IDE</div>
+        <p style="font-size: 0.9rem; color: #475569; line-height: 1.75;">כל המערכת פותחה באמצעות <strong>Visual Studio Code</strong> — כלי הפיתוח המקצועי המוביל בתעשייה, עם תמיכה מלאה ב-TypeScript ו-Next.js.</p>
+        <div style="margin-top: 20px; padding: 14px; background: #F0F9FF; border-radius: 10px; font-size: 0.82rem; color: #0369A1; border: 1px solid rgba(14,165,233,0.2);">
+          🔧 TypeScript · ESLint · Prettier · Git integration
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Combined trust banner -->
+    <div style="margin-top: 40px; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border-radius: 20px; padding: 40px 48px; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center;" class="animate d4">
+      <div>
+        <h3 style="color: white; font-size: 1.3rem; font-weight: 700; margin-bottom: 10px;">
+          🔐 מוכן לארגון — מהקוד ועד הייצור
+        </h3>
+        <p style="color: #94A3B8; font-size: 0.95rem; line-height: 1.8;">
+          הקוד גרס בשמורה ב-<strong style="color: #60A5FA;">GitHub הארגוני</strong> ·
+          מסד הנתונים <strong style="color: #4ADE80;">אושר על ידי CISO חיצוני</strong> ·
+          פיתוח מקצועי ב-<strong style="color: #38BDF8;">Visual Studio Code</strong>
+        </p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; color: #4ADE80; font-size: 0.88rem; font-weight: 600;">
+          <span style="width: 8px; height: 8px; background: #4ADE80; border-radius: 50%; flex-shrink: 0;"></span>
+          קוד מקור בבעלות הארגון
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; color: #4ADE80; font-size: 0.88rem; font-weight: 600;">
+          <span style="width: 8px; height: 8px; background: #4ADE80; border-radius: 50%; flex-shrink: 0;"></span>
+          אושר אבטחת מידע — CISO
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; color: #4ADE80; font-size: 0.88rem; font-weight: 600;">
+          <span style="width: 8px; height: 8px; background: #4ADE80; border-radius: 50%; flex-shrink: 0;"></span>
+          נתונים בתשתיות הארגון בלבד
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -1292,9 +1439,9 @@
         <p>ללא מנוי חודשי, ללא תשלום לפי משתמש/טופס/תשובה. עלות השרת בלבד — חלק קטן ממחיר Google Forms Business, Typeform, או Jotform.</p>
       </div>
       <div class="dark-card animate d2" style="border-color: rgba(34,197,94,0.3);">
-        <div class="dc-icon">🔒</div>
-        <h3>פרטיות ובקרה</h3>
-        <p>כל המידע נשאר בתשתיות הארגון. אין שיתוף עם Google, Meta, או גורם חיצוני. בקרת גישה מלאה ברמת המשתמש.</p>
+        <div class="dc-icon">🛡️</div>
+        <h3>פרטיות ואבטחה מאושרת</h3>
+        <p>כל המידע נשאר בתשתיות הארגון. מסד הנתונים <strong style="color: #4ADE80;">אושר על ידי CISO חיצוני</strong>. אין שיתוף עם Google, Meta, או כל גורם חיצוני.</p>
       </div>
       <div class="dark-card animate d3" style="border-color: rgba(124,58,237,0.3);">
         <div class="dc-icon">🏢</div>
@@ -1304,7 +1451,7 @@
       <div class="dark-card animate d4" style="border-color: rgba(37,99,235,0.3);">
         <div class="dc-icon">⚡</div>
         <h3>גמישות ואבולוציה</h3>
-        <p>כי הקוד שלנו — ניתן להוסיף כל פיצ'ר שנרצה: אינטגרציה עם מערכות פנימיות, התראות, אוטומציות, וכל דרישה עתידית.</p>
+        <p>הקוד שמור ב-<strong style="color: #60A5FA;">GitHub הארגוני</strong> ופותח ב-<strong style="color: #38BDF8;">Visual Studio Code</strong> — ניתן להוסיף כל פיצ'ר: אינטגרציות, התראות, אוטומציות, וכל דרישה עתידית.</p>
       </div>
     </div>
   </div>
@@ -1315,14 +1462,8 @@
   <div class="container">
     <img src="https://www.amarel.net/wp-content/uploads/2024/03/Logo_Amarel_white-Orange-1.svg"
          alt="Amarel" class="footer-logo">
-    <p>מערכת טפסים חכמה | פיתוח פנימי אמרל 2025</p>
-    <p>כל הנתונים מאוחסנים בתשתיות הארגון | Powered by Next.js + Supabase</p>
-    <div class="footer-links">
-      <a href="#">Dashboard</a>
-      <a href="#">Analytics</a>
-      <a href="#">forms.amarel.net</a>
-      <a href="#">מדיניות פרטיות</a>
-    </div>
+    <p>מערכת טפסים חכמה | אמרל 2025</p>
+    <p style="opacity: 0.35; font-size: 0.78rem; margin-top: 8px;">Developed by Dolev Hayut</p>
   </div>
 </footer>
 

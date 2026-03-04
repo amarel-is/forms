@@ -133,17 +133,17 @@ export default function LoginForm() {
 
             <div className="space-y-1.5">
               <Label htmlFor="otp" className="text-sm font-medium">
-                קוד אימות (6 ספרות)
+                קוד אימות (8 ספרות)
               </Label>
               <Input
                 id="otp"
                 type="text"
                 inputMode="numeric"
-                placeholder="123456"
+                placeholder="12345678"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
                 required
-                maxLength={6}
+                maxLength={8}
                 className="h-10 rounded-xl tracking-widest text-center text-lg"
                 dir="ltr"
                 autoFocus
@@ -154,7 +154,7 @@ export default function LoginForm() {
             <Button
               type="submit"
               className="w-full h-10 rounded-xl font-medium"
-              disabled={loading || otp.length < 6}
+              disabled={loading || otp.length < 8}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "אמת וכנס"}
             </Button>
