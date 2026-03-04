@@ -321,14 +321,17 @@ export function computePresence(
   const nameField = form.fields.find((f) => f.attendance_role === "name")?.id
   const divField = form.fields.find((f) => f.attendance_role === "division")?.id
 
-  if (!dirField || !idField) return []
+  // direction field is required; id_number is preferred but name is a valid fallback key
+  if (!dirField) return []
+  const keyField = idField ?? nameField
+  if (!keyField) return []
 
   const latestByPerson = new Map<string, FormResponse>()
   for (const r of [...responses].sort(
     (a, b) =>
       new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
   )) {
-    const key = (r.data[idField] as string) ?? ""
+    const key = (r.data[keyField] as string) ?? ""
     if (key && !latestByPerson.has(key)) {
       latestByPerson.set(key, r)
     }
@@ -338,7 +341,7 @@ export function computePresence(
   latestByPerson.forEach((r, key) => {
     const dir = r.data[dirField] as string
     present.push({
-      id_number: key,
+      id_number: idField ? (r.data[idField] as string) ?? key : key,
       name: nameField ? (r.data[nameField] as string) ?? "" : "",
       division: divField ? (r.data[divField] as string) ?? "" : "",
       direction: dir as "כניסה" | "יציאה",

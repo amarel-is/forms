@@ -95,14 +95,17 @@ export default async function AttendancePage({ params, searchParams }: Props) {
 
   const dayResponses = (dayRows ?? []).map(rowToResponse)
 
-  // All today's responses for presence computation
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
+  // All today's responses for presence computation — always TODAY in Israel timezone
+  const todayRefUtcNoon = new Date(`${todayIL}T12:00:00Z`)
+  const todayIsraelNoon = new Date(todayRefUtcNoon.toLocaleString("en-US", { timeZone: IL_TZ }))
+  const todayUtcNoon = new Date(todayRefUtcNoon.toLocaleString("en-US", { timeZone: "UTC" }))
+  const todayOffsetMs = todayIsraelNoon.getTime() - todayUtcNoon.getTime()
+  const todayMidnightMs = new Date(`${todayIL}T00:00:00Z`).getTime() - todayOffsetMs
   const { data: todayRows } = await sb
     .from("responses")
     .select("*")
     .eq("form_id", id)
-    .gte("submitted_at", todayStart.toISOString())
+    .gte("submitted_at", new Date(todayMidnightMs).toISOString())
     .order("submitted_at", { ascending: false })
 
   const todayResponses = (todayRows ?? []).map(rowToResponse)
