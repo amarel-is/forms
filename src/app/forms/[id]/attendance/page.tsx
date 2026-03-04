@@ -30,6 +30,30 @@ import { AttendanceDateFilter } from "@/components/attendance/attendance-date-fi
 
 export const dynamic = "force-dynamic"
 
+// Palette cycles through 10 distinct colors — works for any division string
+const DIVISION_COLORS = [
+  "bg-blue-100 text-blue-700",
+  "bg-purple-100 text-purple-700",
+  "bg-amber-100 text-amber-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-rose-100 text-rose-700",
+  "bg-cyan-100 text-cyan-700",
+  "bg-orange-100 text-orange-700",
+  "bg-indigo-100 text-indigo-700",
+  "bg-teal-100 text-teal-700",
+  "bg-pink-100 text-pink-700",
+]
+
+function divisionColor(division: string): string {
+  if (!division) return "bg-neutral-100 text-neutral-500"
+  // Stable hash so the same name always gets the same color
+  let hash = 0
+  for (let i = 0; i < division.length; i++) {
+    hash = (hash * 31 + division.charCodeAt(i)) >>> 0
+  }
+  return DIVISION_COLORS[hash % DIVISION_COLORS.length]
+}
+
 interface Props {
   params: Promise<{ id: string }>
   searchParams: Promise<{ date?: string }>
@@ -196,7 +220,13 @@ export default async function AttendancePage({ params, searchParams }: Props) {
                       <UserCheck className="h-4 w-4 text-green-500" />
                     </div>
                     <p className="font-semibold text-sm text-neutral-900 truncate">{p.name || "—"}</p>
-                    <p className="text-xs text-neutral-500">{p.division || "—"}</p>
+                    {p.division ? (
+                      <span className={`self-start text-xs font-medium px-2 py-0.5 rounded-md ${divisionColor(p.division)}`}>
+                        {p.division}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-neutral-400">—</span>
+                    )}
                     <div className="flex items-center gap-1 text-xs text-neutral-400">
                       <Clock className="h-3 w-3" />
                       {new Date(p.submitted_at).toLocaleTimeString("he-IL", {
