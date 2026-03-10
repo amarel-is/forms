@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AppHeader } from "@/components/layout/amarel-nav"
 import { ResponsesOverTimeChart } from "@/components/analytics/responses-over-time-chart"
-import { FormsBarChart } from "@/components/analytics/forms-bar-chart"
+import { FormsLeaderboard } from "@/components/analytics/forms-leaderboard"
 import { DayOfWeekChart } from "@/components/analytics/day-of-week-chart"
 import { DateRangeFilter } from "@/components/analytics/date-range-filter"
 import { createClient } from "@/lib/supabase/server"
@@ -228,15 +228,15 @@ export default async function AnalyticsPage({ searchParams }: Props) {
 
         {/* Charts row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Per-form bar chart */}
+          {/* Per-form leaderboard */}
           <div className="bg-white rounded-2xl border border-neutral-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-sm font-semibold text-neutral-800">תגובות לפי טופס</h2>
-                <p className="text-xs text-neutral-400 mt-0.5">כל הזמן • כחול = כללי, כתום = נוכחות</p>
+                <p className="text-xs text-neutral-400 mt-0.5">כל הזמן • לידרבורד לפי סה״כ תגובות</p>
               </div>
             </div>
-            <FormsBarChart data={formStats} />
+            <FormsLeaderboard data={formStats} />
           </div>
 
           {/* Forms table */}

@@ -14,9 +14,11 @@ import type { FieldConfig, FormResponse } from "@/lib/types"
 interface ResponsesTableProps {
   fields: FieldConfig[]
   responses: FormResponse[]
+  /** When false, cells are wider and text wraps instead of truncating (e.g. in dialog) */
+  compact?: boolean
 }
 
-export function ResponsesTable({ fields, responses }: ResponsesTableProps) {
+export function ResponsesTable({ fields, responses, compact = true }: ResponsesTableProps) {
   if (responses.length === 0) {
     return (
       <div className="text-center py-12 text-neutral-400 text-sm">
@@ -53,7 +55,9 @@ export function ResponsesTable({ fields, responses }: ResponsesTableProps) {
             {fields.map((f) => (
               <TableHead
                 key={f.id}
-                className="text-xs font-semibold text-neutral-500 min-w-[140px] text-right"
+                className={`text-xs font-semibold text-neutral-500 text-right ${
+                  compact ? "min-w-[140px]" : "min-w-[160px]"
+                }`}
               >
                 {f.label || "ללא שם"}
               </TableHead>
@@ -72,7 +76,10 @@ export function ResponsesTable({ fields, responses }: ResponsesTableProps) {
                 })}
               </TableCell>
               {fields.map((f) => (
-                <TableCell key={f.id} className="max-w-[200px] truncate text-right">
+                <TableCell
+                  key={f.id}
+                  className={`text-right ${compact ? "max-w-[200px] truncate" : "min-w-[160px] max-w-[320px] break-words whitespace-normal"}`}
+                >
                   {formatValue(response.data[f.id])}
                 </TableCell>
               ))}

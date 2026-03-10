@@ -310,7 +310,7 @@ export function FormCard({ form, responseCount }: FormCardProps) {
 
       {/* Submissions quick-view dialog */}
       <Dialog open={submissionsOpen} onOpenChange={setSubmissionsOpen}>
-        <DialogContent className="rounded-2xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+        <DialogContent className="rounded-2xl max-w-6xl w-[95vw] max-h-[85vh] flex flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Inbox className="h-4 w-4 text-orange-600" />
@@ -336,6 +336,7 @@ export function FormCard({ form, responseCount }: FormCardProps) {
                   (f) => !["heading", "subheading", "paragraph", "divider", "image", "link"].includes(f.type)
                 )}
                 responses={submissions}
+                compact={false}
               />
             )}
           </div>
