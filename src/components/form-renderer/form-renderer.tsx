@@ -302,8 +302,7 @@ export function FormRenderer({ form }: FormRendererProps) {
         <div className="space-y-6 mb-8">
           {form.fields
             .filter((f) => {
-              if (f.type === "section") return visibleFieldIds.has(f.id)
-              if (isLayoutField(f.type)) return true
+              if (isLayoutField(f.type) && !f.conditions) return true
               return visibleFieldIds.has(f.id)
             })
             .map((field) => (
