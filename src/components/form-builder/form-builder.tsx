@@ -42,6 +42,7 @@ import {
   Trash2,
   ClipboardCheck,
   Database,
+  Sparkles as SparklesIcon,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -85,6 +86,7 @@ import {
   type FormType,
 } from "@/lib/types"
 import { DatasetEditor } from "./dataset-editor"
+import { AiChatPanel } from "./ai-chat-panel"
 
 interface FormBuilderProps {
   initialForm?: Form
@@ -139,6 +141,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     (initialForm?.schema?.datasets as FormDataset[] | undefined) ?? []
   )
   const [editingDatasetId, setEditingDatasetId] = useState<string | null>(null)
+  const [aiChatOpen, setAiChatOpen] = useState(false)
 
   const isEditing = !!initialForm
 
@@ -463,6 +466,20 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                 </Link>
               </Button>
             )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setAiChatOpen(!aiChatOpen)}
+              className={`rounded-xl gap-1.5 h-8 text-xs border ${
+                aiChatOpen
+                  ? "bg-violet-500/20 text-violet-200 border-violet-400/30"
+                  : "text-white/80 hover:text-white hover:bg-white/10 border-white/20"
+              }`}
+            >
+              <SparklesIcon className="h-3.5 w-3.5" />
+              AI
+            </Button>
 
             <Button
               variant="ghost"
@@ -970,6 +987,14 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       </Dialog>
 
       {/* Dataset editor overlay */}
+      {/* AI Chat Panel */}
+      <AiChatPanel
+        open={aiChatOpen}
+        onClose={() => setAiChatOpen(false)}
+        fields={fields}
+        onFieldsUpdate={setFields}
+      />
+
       {editingDatasetId && (() => {
         const ds = datasets.find((d) => d.id === editingDatasetId)
         if (!ds) return null
