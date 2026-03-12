@@ -131,8 +131,8 @@ export function FormCard({ form, responseCount, allFolders = [] }: FormCardProps
   return (
     <>
       <div className="group relative bg-white border border-neutral-200 rounded-2xl p-5 hover:shadow-md hover:border-neutral-300 transition-all duration-200 flex flex-col gap-4">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
+        {/* Header — above click overlay so menu opens instead of navigating */}
+        <div className="relative z-10 flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-neutral-900 truncate text-sm">
               {form.name}
@@ -281,7 +281,7 @@ export function FormCard({ form, responseCount, allFolders = [] }: FormCardProps
           </div>
         </div>
 
-        {/* Quick action buttons */}
+        {/* Quick action buttons — above click overlay */}
         <div className="relative z-10 flex items-center gap-1.5 border-t border-neutral-100 pt-3 -mx-1">
           <Button
             variant="ghost"

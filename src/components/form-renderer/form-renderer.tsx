@@ -28,6 +28,7 @@ import {
 import { SignatureField } from "./fields/signature-field"
 import { RememberDialog, MEMORY_KEY, isSaveableField, type FormMemory } from "./remember-dialog"
 import { submitResponse } from "@/lib/actions/responses"
+import { computeAIField } from "@/lib/actions/ai"
 import { isLayoutField, type FieldConfig, type Form, type FormDataset } from "@/lib/types"
 import { validateTextValue } from "@/lib/field-validation"
 import { isFieldVisibleWithSections } from "@/lib/conditions"
@@ -85,7 +86,6 @@ function AiComputedElement({
     setError(null)
     setResult(null)
 
-    const { computeAIField } = await import("@/lib/actions/ai")
     const res = await computeAIField({
       promptTemplate: field.prompt_template!,
       fieldValues,
