@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation"
 import { decideApprovalByToken, getApprovalByToken } from "@/lib/actions/approvals"
 import { isLayoutField, type FieldConfig } from "@/lib/types"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table"
+import { ApproveForm } from "./approve-form"
 
 interface Props {
   params: Promise<{ token: string }>
@@ -116,7 +121,7 @@ export default async function ApproveByTokenPage({ params, searchParams }: Props
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-5">
             <div className="rounded-lg border border-neutral-200 p-3">
               <p className="text-xs text-neutral-500 mb-1">מאשר</p>
               <p className="font-medium text-neutral-800">{approval.approver_name}</p>
@@ -128,36 +133,29 @@ export default async function ApproveByTokenPage({ params, searchParams }: Props
           </div>
 
           {displayFields.length > 0 && (
-            <div className="space-y-2 mb-5">
-              <h2 className="text-sm font-semibold text-neutral-700">פרטי הבקשה</h2>
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 space-y-2">
-                {displayFields.map((f) => (
-                  <div key={f.label} className="flex items-start justify-between gap-4 text-xs">
-                    <span className="text-neutral-500 shrink-0">{f.label}</span>
-                    <span className="text-neutral-800 text-left break-all">{f.value}</span>
-                  </div>
-                ))}
+            <div className="mb-5">
+              <h2 className="text-sm font-semibold text-neutral-700 mb-3">פרטי הבקשה</h2>
+              <div className="rounded-xl border border-neutral-200 overflow-hidden">
+                <Table>
+                  <TableBody>
+                    {displayFields.map((f) => (
+                      <TableRow key={f.label} className="hover:bg-neutral-50">
+                        <TableCell className="text-xs font-medium text-neutral-500 w-1/3 text-right bg-neutral-50 border-l border-neutral-200">
+                          {f.label}
+                        </TableCell>
+                        <TableCell className="text-sm text-neutral-800 text-right break-words">
+                          {f.value || "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )}
 
           {!query.result && (
-            <>
-              <form className="space-y-3" action={approveAction}>
-                <Textarea name="note" placeholder="הערה (אופציונלי)" className="min-h-20 rounded-xl" />
-                <Textarea name="signature" placeholder="חתימה טקסטואלית (אופציונלי)" className="min-h-16 rounded-xl" />
-                <Button type="submit" className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700">
-                  אשר
-                </Button>
-              </form>
-
-              <form className="mt-2" action={rejectAction}>
-                <input type="hidden" name="note" value="" />
-                <Button type="submit" variant="outline" className="w-full rounded-xl border-red-200 text-red-600 hover:bg-red-50">
-                  דחה
-                </Button>
-              </form>
-            </>
+            <ApproveForm approveAction={approveAction} rejectAction={rejectAction} />
           )}
         </section>
 

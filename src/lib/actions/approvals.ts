@@ -71,47 +71,33 @@ export async function initializeApprovalForResponse(responseId: string): Promise
   const firstToken = data.first_token as string
 
   if (firstToken && approvalId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any
-
-    const { data: respRow } = await sb
-      .from("responses")
-      .select("form_id, data")
-      .eq("id", responseId)
-      .single()
-
-    const { data: formRow } = await sb
-      .from("forms")
-      .select("name, settings")
-      .eq("id", respRow?.form_id)
-      .single()
-
-    const { data: stepRow } = await sb
-      .from("response_approval_steps")
-      .select("approver_name, approver_channel, approver_target")
-      .eq("response_approval_id", approvalId)
-      .eq("step_index", 0)
-      .single()
-
-    const wfSteps = ((formRow?.settings as Record<string, unknown>)?.approval_workflow as Record<string, unknown>)?.steps
-    const totalSteps = Array.isArray(wfSteps) ? wfSteps.length : 1
-
-    if (stepRow) {
-      await notifyApproverViaWebhook({
-        event: "approval_requested",
-        approve_url: `${SITE_URL}/approve/${firstToken}`,
-        token: firstToken,
-        form_name: formRow?.name ?? "",
-        form_id: respRow?.form_id ?? "",
-        response_id: responseId,
-        approval_id: approvalId,
-        step_index: 0,
-        total_steps: totalSteps,
-        approver_name: stepRow.approver_name,
-        approver_channel: stepRow.approver_channel,
-        approver_target: stepRow.approver_target,
-        response_data: (respRow?.data ?? {}) as Record<string, string | string[]>,
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: ctx } = await (supabase as any).rpc("get_webhook_context_after_decision", {
+        p_approval_status: "in_progress",
+        p_next_token: null,
+        p_next_step_index: 0,
       })
+
+      if (ctx && ctx.found) {
+        await notifyApproverViaWebhook({
+          event: "approval_requested",
+          approve_url: `${SITE_URL}/approve/${firstToken}`,
+          token: firstToken,
+          form_name: ctx.form_name ?? "",
+          form_id: ctx.form_id ?? "",
+          response_id: responseId,
+          approval_id: approvalId,
+          step_index: 0,
+          total_steps: ctx.total_steps ?? 1,
+          approver_name: ctx.next_approver_name ?? "",
+          approver_channel: ctx.next_approver_channel ?? "email",
+          approver_target: ctx.next_approver_target ?? "",
+          response_data: (ctx.response_data ?? {}) as Record<string, string | string[]>,
+        })
+      }
+    } catch {
+      // webhook notification failed — non-blocking
     }
   }
 
@@ -168,91 +154,53 @@ export async function decideApprovalByToken(params: {
   if (!data.ok) return { error: data.error ?? "failed" }
 
   const resultStatus = data.status as string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
 
-  // Look up context once using the original token (now marked used, but step still findable)
-  const tokenHash = await sb.rpc("encode_sha256", { input: params.token }).catch(() => null)
-  void tokenHash
+  // Webhook notifications — fire-and-forget, must never crash the approval flow
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: ctx } = await (supabase as any).rpc("get_webhook_context_after_decision", {
+      p_approval_status: resultStatus,
+      p_next_token: data.next_token ?? null,
+      p_next_step_index: data.next_step_index ?? null,
+    })
 
-  // Fetch the step that was just decided (most recently acted on)
-  const { data: decidedStep } = await sb
-    .from("response_approval_steps")
-    .select("response_approval_id, step_index, approver_name")
-    .eq("status", params.decision)
-    .order("acted_at", { ascending: false })
-    .limit(1)
-    .single()
-
-  const approvalId = decidedStep?.response_approval_id as string | undefined
-
-  if (approvalId) {
-    const { data: approvalRow } = await sb
-      .from("response_approvals")
-      .select("form_id, response_id, current_step_index")
-      .eq("id", approvalId)
-      .single()
-
-    const { data: formRow } = await sb
-      .from("forms")
-      .select("name, settings")
-      .eq("id", approvalRow?.form_id)
-      .single()
-
-    const { data: respRow } = await sb
-      .from("responses")
-      .select("data")
-      .eq("id", approvalRow?.response_id)
-      .single()
-
-    const wfSteps = ((formRow?.settings as Record<string, unknown>)?.approval_workflow as Record<string, unknown>)?.steps
-    const totalSteps = Array.isArray(wfSteps) ? wfSteps.length : 1
-
-    if (resultStatus === "in_progress" && data.next_token) {
-      const nextToken = data.next_token as string
-      const nextIdx = data.next_step_index as number
-
-      const { data: nextStep } = await sb
-        .from("response_approval_steps")
-        .select("approver_name, approver_channel, approver_target")
-        .eq("response_approval_id", approvalId)
-        .eq("step_index", nextIdx)
-        .single()
-
-      if (nextStep) {
+    if (ctx && typeof ctx === "object") {
+      if (resultStatus === "in_progress" && data.next_token && ctx.next_approver_name) {
         await notifyApproverViaWebhook({
           event: "next_step_requested",
-          approve_url: `${SITE_URL}/approve/${nextToken}`,
-          token: nextToken,
-          form_name: formRow?.name ?? "",
-          form_id: approvalRow?.form_id ?? "",
-          response_id: approvalRow?.response_id ?? "",
-          approval_id: approvalId,
-          step_index: nextIdx,
-          total_steps: totalSteps,
-          approver_name: nextStep.approver_name,
-          approver_channel: nextStep.approver_channel,
-          approver_target: nextStep.approver_target,
-          response_data: (respRow?.data ?? {}) as Record<string, string | string[]>,
+          approve_url: `${SITE_URL}/approve/${data.next_token as string}`,
+          token: data.next_token as string,
+          form_name: ctx.form_name ?? "",
+          form_id: ctx.form_id ?? "",
+          response_id: ctx.response_id ?? "",
+          approval_id: ctx.approval_id ?? "",
+          step_index: (data.next_step_index as number) ?? 0,
+          total_steps: ctx.total_steps ?? 1,
+          approver_name: ctx.next_approver_name,
+          approver_channel: ctx.next_approver_channel ?? "email",
+          approver_target: ctx.next_approver_target ?? "",
+          response_data: (ctx.response_data ?? {}) as Record<string, string | string[]>,
+        })
+      }
+
+      if (resultStatus === "approved" || resultStatus === "rejected") {
+        await notifyApproverViaWebhook({
+          event: "approval_completed",
+          form_name: ctx.form_name ?? "",
+          form_id: ctx.form_id ?? "",
+          response_id: ctx.response_id ?? "",
+          approval_id: ctx.approval_id ?? "",
+          step_index: 0,
+          total_steps: ctx.total_steps ?? 0,
+          approver_name: "",
+          approver_channel: "email",
+          approver_target: "",
+          final_status: resultStatus,
         })
       }
     }
-
-    if (resultStatus === "approved" || resultStatus === "rejected") {
-      await notifyApproverViaWebhook({
-        event: "approval_completed",
-        form_name: formRow?.name ?? "",
-        form_id: approvalRow?.form_id ?? "",
-        response_id: approvalRow?.response_id ?? "",
-        approval_id: approvalId,
-        step_index: decidedStep?.step_index ?? 0,
-        total_steps: totalSteps,
-        approver_name: decidedStep?.approver_name ?? "",
-        approver_channel: "email",
-        approver_target: "",
-        final_status: resultStatus,
-      })
-    }
+  } catch {
+    // webhook context fetch failed — non-blocking
   }
 
   return { success: true, status: resultStatus }

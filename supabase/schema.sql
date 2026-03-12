@@ -142,7 +142,7 @@ create trigger response_approval_steps_updated_at
 
 create or replace function initialize_approval_for_response(p_response_id uuid)
 returns jsonb
-language plpgsql security definer set search_path = 'public'
+language plpgsql security definer set search_path = 'public', 'extensions'
 as $$
 declare
   v_response  responses%rowtype;
@@ -266,7 +266,7 @@ returns table (
   approver_name text, approver_channel text, approver_target text,
   expires_at timestamptz
 )
-language plpgsql security definer set search_path = 'public'
+language plpgsql security definer set search_path = 'public', 'extensions'
 as $$
 begin
   return query
@@ -305,7 +305,7 @@ create or replace function decide_approval_by_token(
   p_token text, p_decision text, p_note text default null, p_signature text default null
 )
 returns jsonb
-language plpgsql security definer set search_path = 'public'
+language plpgsql security definer set search_path = 'public', 'extensions'
 as $$
 declare
   v_step       response_approval_steps%rowtype;
