@@ -41,6 +41,7 @@ import {
   Plus,
   Trash2,
   ClipboardCheck,
+  Database,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -80,8 +81,10 @@ import {
   type FieldConfig,
   type FieldType,
   type Form,
+  type FormDataset,
   type FormType,
 } from "@/lib/types"
+import { DatasetEditor } from "./dataset-editor"
 
 interface FormBuilderProps {
   initialForm?: Form
@@ -132,6 +135,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const [publishing, setPublishing] = useState(false)
   const [isPublished, setIsPublished] = useState(initialForm?.is_published ?? false)
   const [attendanceDialog, setAttendanceDialog] = useState(false)
+  const [datasets, setDatasets] = useState<FormDataset[]>(
+    (initialForm?.schema?.datasets as FormDataset[] | undefined) ?? []
+  )
+  const [editingDatasetId, setEditingDatasetId] = useState<string | null>(null)
 
   const isEditing = !!initialForm
 
@@ -324,7 +331,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
               },
             } : {}),
           },
-          schema: {},
+          schema: { ...(datasets.length > 0 ? { datasets } : {}) },
           ...(publish !== undefined ? { is_published: publish } : {}),
         }
 
@@ -354,7 +361,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         setPublishing(false)
       }
     },
-    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, approvalSteps, approvalVisMode, getFieldOptions, isEditing, initialForm, router]
+    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
   )
 
   return (
@@ -538,7 +545,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4" style={{ direction: "rtl" }}>
               {selectedField ? (
-                <FieldEditorPanel field={selectedField} onChange={updateField} allFields={fields} />
+                <FieldEditorPanel field={selectedField} onChange={updateField} allFields={fields} datasets={datasets} />
               ) : (
                 <div className="space-y-5">
                   {/* Title alignment */}
@@ -743,6 +750,77 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                     )}
                   </div>
 
+                  <Separator />
+
+                  {/* Datasets (mini databases) */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide flex items-center gap-1.5">
+                      <Database className="h-3.5 w-3.5" />
+                      מאגרי מידע
+                    </Label>
+                    {datasets.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {datasets.map((ds) => (
+                          <div
+                            key={ds.id}
+                            className="flex items-center gap-2 bg-neutral-50 rounded-lg px-3 py-2 group"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setEditingDatasetId(ds.id)}
+                              className="flex-1 text-start text-sm text-neutral-700 hover:text-neutral-900 truncate"
+                            >
+                              {ds.name}
+                              <span className="text-[10px] text-neutral-400 ms-1.5">
+                                ({ds.columns.length} עמודות · {ds.rows.length} שורות)
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDatasets((prev) => prev.filter((d) => d.id !== ds.id))
+                                setFields((prev) =>
+                                  prev.map((f) =>
+                                    f.data_source?.dataset_id === ds.id
+                                      ? { ...f, data_source: undefined }
+                                      : f
+                                  )
+                                )
+                              }}
+                              className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-neutral-400">אין מאגרי מידע</p>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const id = nanoid()
+                        const newDs: FormDataset = {
+                          id,
+                          name: `מאגר ${datasets.length + 1}`,
+                          columns: [],
+                          rows: [],
+                        }
+                        setDatasets((prev) => [...prev, newDs])
+                        setEditingDatasetId(id)
+                      }}
+                      className="w-full h-8 rounded-xl gap-1.5 text-xs"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      הוסף מאגר מידע
+                    </Button>
+                  </div>
+
+                  <Separator />
+
                   {/* Quick templates */}
                   {(!isEditing || formType === "general") && (
                     <div className="space-y-2">
@@ -890,6 +968,34 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dataset editor overlay */}
+      {editingDatasetId && (() => {
+        const ds = datasets.find((d) => d.id === editingDatasetId)
+        if (!ds) return null
+        return (
+          <DatasetEditor
+            dataset={ds}
+            onChange={(updated) =>
+              setDatasets((prev) =>
+                prev.map((d) => (d.id === updated.id ? updated : d))
+              )
+            }
+            onBack={() => setEditingDatasetId(null)}
+            onDelete={() => {
+              setDatasets((prev) => prev.filter((d) => d.id !== editingDatasetId))
+              setFields((prev) =>
+                prev.map((f) =>
+                  f.data_source?.dataset_id === editingDatasetId
+                    ? { ...f, data_source: undefined }
+                    : f
+                )
+              )
+              setEditingDatasetId(null)
+            }}
+          />
+        )
+      })()}
     </>
   )
 }

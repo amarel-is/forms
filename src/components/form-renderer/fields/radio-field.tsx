@@ -12,9 +12,10 @@ interface RadioFieldProps {
   value: string
   onChange: (value: string) => void
   error?: string
+  resolvedOptions?: string[]
 }
 
-export function RadioField({ field, value, onChange, error }: RadioFieldProps) {
+export function RadioField({ field, value, onChange, error, resolvedOptions }: RadioFieldProps) {
   const isStoredOther = value.startsWith("אחר: ") || value === "אחר:"
   const [selectedVal, setSelectedVal] = useState(isStoredOther ? OTHER_SENTINEL : value)
   const [otherText, setOtherText] = useState(
@@ -48,7 +49,7 @@ export function RadioField({ field, value, onChange, error }: RadioFieldProps) {
       </Label>
 
       <div className="space-y-2.5">
-        {(field.options ?? []).map((opt) => {
+        {(resolvedOptions ?? field.options ?? []).map((opt) => {
           const selected = selectedVal === opt
           return (
             <label

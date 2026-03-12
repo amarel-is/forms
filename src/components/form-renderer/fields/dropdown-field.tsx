@@ -19,9 +19,10 @@ interface DropdownFieldProps {
   value: string
   onChange: (value: string) => void
   error?: string
+  resolvedOptions?: string[]
 }
 
-export function DropdownField({ field, value, onChange, error }: DropdownFieldProps) {
+export function DropdownField({ field, value, onChange, error, resolvedOptions }: DropdownFieldProps) {
   // When "other" was previously saved, split the stored "אחר: <text>" back out
   const isStoredOther = value.startsWith("אחר: ") || value === "אחר:"
   const [selectVal, setSelectVal] = useState(isStoredOther ? OTHER_SENTINEL : value)
@@ -62,7 +63,7 @@ export function DropdownField({ field, value, onChange, error }: DropdownFieldPr
           <SelectValue placeholder="בחר אפשרות…" />
         </SelectTrigger>
         <SelectContent className="rounded-xl" dir="rtl">
-          {(field.options ?? []).map((opt) => (
+          {(resolvedOptions ?? field.options ?? []).map((opt) => (
             <SelectItem
               key={opt}
               value={opt}

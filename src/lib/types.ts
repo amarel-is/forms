@@ -99,6 +99,11 @@ export interface FieldConfig {
   conditions?: FieldCondition     // visibility rules — shown when conditions met
   attendance_role?: "id_number" | "name" | "division" | "direction"
   show_to_approver?: boolean      // approval forms: visible in approver page (default: true)
+  data_source?: {
+    dataset_id: string
+    label_column: string
+    value_column: string
+  }
 }
 
 // ─── Form types ───────────────────────────────────────────────────────────────
@@ -140,7 +145,28 @@ export interface FormSettings {
   approval_field_visibility?: ApprovalFieldVisibility
 }
 
+// ─── Per-form datasets ("mini databases") ────────────────────────────────────
+
+export interface DatasetColumn {
+  id: string
+  name: string
+  type: "text" | "number"
+}
+
+export interface DatasetRow {
+  id: string
+  [columnId: string]: string | number
+}
+
+export interface FormDataset {
+  id: string
+  name: string
+  columns: DatasetColumn[]
+  rows: DatasetRow[]
+}
+
 export interface FormSchema {
+  datasets?: FormDataset[]
   [key: string]: unknown
 }
 

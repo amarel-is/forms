@@ -13,6 +13,7 @@ interface MultiSelectFieldProps {
   value: string[]
   onChange: (value: string[]) => void
   error?: string
+  resolvedOptions?: string[]
 }
 
 export function MultiSelectField({
@@ -20,6 +21,7 @@ export function MultiSelectField({
   value,
   onChange,
   error,
+  resolvedOptions,
 }: MultiSelectFieldProps) {
   const otherEntry = value.find((v) => v.startsWith(OTHER_PREFIX) || v === "אחר:")
   const [otherChecked, setOtherChecked] = useState(!!otherEntry)
@@ -65,7 +67,7 @@ export function MultiSelectField({
       </Label>
 
       <div className="space-y-2.5">
-        {(field.options ?? []).map((opt) => {
+        {(resolvedOptions ?? field.options ?? []).map((opt) => {
           const selected = value.includes(opt)
           return (
             <label

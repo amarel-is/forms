@@ -22,6 +22,7 @@ import {
 import {
   isLayoutField,
   type FieldConfig,
+  type FormDataset,
   type TextValidationType,
 } from "@/lib/types"
 import { VALIDATION_PRESETS } from "@/lib/field-validation"
@@ -55,9 +56,10 @@ interface FieldEditorPanelProps {
   field: FieldConfig
   onChange: (updated: FieldConfig) => void
   allFields: FieldConfig[]
+  datasets?: FormDataset[]
 }
 
-export function FieldEditorPanel({ field, onChange, allFields }: FieldEditorPanelProps) {
+export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: FieldEditorPanelProps) {
   const [newOption, setNewOption] = useState("")
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -665,70 +667,201 @@ export function FieldEditorPanel({ field, onChange, allFields }: FieldEditorPane
             </div>
           )}
 
-          {/* Options (dropdown / multiselect) */}
+          {/* Options (dropdown / multiselect / radio) */}
           {hasOptions && (
             <div className="space-y-2">
               <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
                 אפשרויות
               </Label>
 
-              {(field.options ?? []).length > 0 && (
-                <div className="flex flex-col gap-1.5 mb-2">
-                  {(field.options ?? []).map((opt, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-2 bg-neutral-50 rounded-lg px-3 py-2"
+              {/* Manual / From Dataset toggle — only shown when datasets exist */}
+              {datasets.length > 0 && (
+                <div className="flex gap-1.5 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => update({ data_source: undefined })}
+                    className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                      !field.data_source
+                        ? "bg-neutral-800 border-neutral-800 text-white"
+                        : "border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+                    }`}
+                  >
+                    ידני
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const first = datasets[0]
+                      const firstCol = first?.columns[0]
+                      if (first && firstCol) {
+                        update({
+                          data_source: {
+                            dataset_id: first.id,
+                            label_column: firstCol.id,
+                            value_column: firstCol.id,
+                          },
+                        })
+                      }
+                    }}
+                    className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                      field.data_source
+                        ? "bg-neutral-800 border-neutral-800 text-white"
+                        : "border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+                    }`}
+                  >
+                    ממאגר מידע
+                  </button>
+                </div>
+              )}
+
+              {/* From Dataset selectors */}
+              {field.data_source ? (
+                <div className="space-y-3 rounded-xl border border-neutral-200 p-3 bg-neutral-50/50">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] text-neutral-500">מאגר</Label>
+                    <Select
+                      value={field.data_source.dataset_id}
+                      onValueChange={(v) => {
+                        const ds = datasets.find((d) => d.id === v)
+                        const firstCol = ds?.columns[0]
+                        update({
+                          data_source: {
+                            dataset_id: v,
+                            label_column: firstCol?.id ?? "",
+                            value_column: firstCol?.id ?? "",
+                          },
+                        })
+                      }}
+                      dir="rtl"
                     >
-                      <span className="flex-1 text-sm text-neutral-700 truncate">{opt}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeOption(i)}
-                        className="text-neutral-300 hover:text-red-500 transition-colors"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Input
-                  value={newOption}
-                  onChange={(e) => setNewOption(e.target.value)}
-                  onKeyDown={handleOptionKeyDown}
-                  placeholder="הוסף אפשרות…"
-                  className="h-9 rounded-xl text-sm flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={addOption}
-                  className="h-9 w-9 rounded-xl shrink-0"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {(field.options ?? []).length === 0 && (
-                <p className="text-xs text-neutral-400">לחץ Enter או + להוספת אפשרויות</p>
-              )}
-
-              {/* Allow other — dropdown, radio & multiselect */}
-              {(field.type === "dropdown" || field.type === "radio" || field.type === "multiselect") && (
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-700">אפשרות &quot;אחר&quot;</p>
-                    <p className="text-xs text-neutral-400">מאפשר למשיב לרשום ערך חופשי</p>
+                      <SelectTrigger className="h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {datasets.map((ds) => (
+                          <SelectItem key={ds.id} value={ds.id}>{ds.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Checkbox
-                    checked={field.allow_other ?? false}
-                    onCheckedChange={(checked) =>
-                      update({ allow_other: checked === true ? true : undefined })
+                  {(() => {
+                    const ds = datasets.find((d) => d.id === field.data_source!.dataset_id)
+                    if (!ds || ds.columns.length === 0) {
+                      return <p className="text-xs text-amber-600">למאגר הנבחר אין עמודות.</p>
                     }
-                    className="rounded-md"
-                  />
+                    return (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label className="text-[11px] text-neutral-500">עמודת תצוגה</Label>
+                          <Select
+                            value={field.data_source!.label_column}
+                            onValueChange={(v) => update({ data_source: { ...field.data_source!, label_column: v } })}
+                            dir="rtl"
+                          >
+                            <SelectTrigger className="h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {ds.columns.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[11px] text-neutral-500">עמודת ערך נשמר</Label>
+                          <Select
+                            value={field.data_source!.value_column}
+                            onValueChange={(v) => update({ data_source: { ...field.data_source!, value_column: v } })}
+                            dir="rtl"
+                          >
+                            <SelectTrigger className="h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {ds.columns.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {ds.rows.length > 0 && (
+                          <div className="space-y-1">
+                            <Label className="text-[11px] text-neutral-500">תצוגה מקדימה</Label>
+                            <div className="flex flex-wrap gap-1">
+                              {ds.rows.slice(0, 5).map((row) => (
+                                <Badge key={row.id} variant="outline" className="text-[10px] rounded-md">
+                                  {String(row[field.data_source!.label_column] ?? "")}
+                                </Badge>
+                              ))}
+                              {ds.rows.length > 5 && (
+                                <Badge variant="outline" className="text-[10px] rounded-md text-neutral-400">
+                                  +{ds.rows.length - 5}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
+              ) : (
+                <>
+                  {/* Manual options — existing behavior */}
+                  {(field.options ?? []).length > 0 && (
+                    <div className="flex flex-col gap-1.5 mb-2">
+                      {(field.options ?? []).map((opt, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 bg-neutral-50 rounded-lg px-3 py-2"
+                        >
+                          <span className="flex-1 text-sm text-neutral-700 truncate">{opt}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeOption(i)}
+                            className="text-neutral-300 hover:text-red-500 transition-colors"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Input
+                      value={newOption}
+                      onChange={(e) => setNewOption(e.target.value)}
+                      onKeyDown={handleOptionKeyDown}
+                      placeholder="הוסף אפשרות…"
+                      className="h-9 rounded-xl text-sm flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={addOption}
+                      className="h-9 w-9 rounded-xl shrink-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {(field.options ?? []).length === 0 && !field.data_source && (
+                    <p className="text-xs text-neutral-400">לחץ Enter או + להוספת אפשרויות</p>
+                  )}
+
+                  {/* Allow other — dropdown, radio & multiselect */}
+                  {(field.type === "dropdown" || field.type === "radio" || field.type === "multiselect") && (
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
+                      <div>
+                        <p className="text-sm font-medium text-neutral-700">אפשרות &quot;אחר&quot;</p>
+                        <p className="text-xs text-neutral-400">מאפשר למשיב לרשום ערך חופשי</p>
+                      </div>
+                      <Checkbox
+                        checked={field.allow_other ?? false}
+                        onCheckedChange={(checked) =>
+                          update({ allow_other: checked === true ? true : undefined })
+                        }
+                        className="rounded-md"
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

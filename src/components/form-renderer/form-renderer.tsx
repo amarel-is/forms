@@ -27,7 +27,7 @@ import {
 import { SignatureField } from "./fields/signature-field"
 import { RememberDialog, MEMORY_KEY, isSaveableField, type FormMemory } from "./remember-dialog"
 import { submitResponse } from "@/lib/actions/responses"
-import { isLayoutField, type FieldConfig, type Form } from "@/lib/types"
+import { isLayoutField, type FieldConfig, type Form, type FormDataset } from "@/lib/types"
 import { validateTextValue } from "@/lib/field-validation"
 import { isFieldVisibleWithSections } from "@/lib/conditions"
 
@@ -53,6 +53,30 @@ function readMemory(formId: string): FormMemory | null {
 function hasActiveMemory(formId: string): boolean {
   const m = readMemory(formId)
   return !!m && m.savedFieldIds.length > 0
+}
+
+// ─── Resolve dataset-backed options ────────────────────────────────────────────
+
+function resolveFieldOptions(
+  field: FieldConfig,
+  datasets: FormDataset[] | undefined
+): { labels: string[]; valueMap: Map<string, string> } | null {
+  if (!field.data_source || !datasets) return null
+  const ds = datasets.find((d) => d.id === field.data_source!.dataset_id)
+  if (!ds) return null
+
+  const labels: string[] = []
+  const valueMap = new Map<string, string>()
+
+  for (const row of ds.rows) {
+    const label = String(row[field.data_source.label_column] ?? "")
+    const value = String(row[field.data_source.value_column] ?? "")
+    if (label) {
+      labels.push(label)
+      valueMap.set(label, value)
+    }
+  }
+  return { labels, valueMap }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -287,6 +311,7 @@ export function FormRenderer({ form }: FormRendererProps) {
                   value={isLayoutField(field.type) ? "" : values[field.id]}
                   error={errors[field.id]}
                   onChange={(val) => setValue(field.id, val)}
+                  datasets={form.schema?.datasets as FormDataset[] | undefined}
                 />
               </div>
             ))}
@@ -364,11 +389,13 @@ function FieldRenderer({
   value,
   error,
   onChange,
+  datasets,
 }: {
   field: FieldConfig
   value: string | string[]
   error?: string
   onChange: (val: string | string[]) => void
+  datasets?: FormDataset[]
 }) {
   // Layout / visual elements
   if (field.type === "heading")    return <HeadingElement field={field} />
@@ -393,13 +420,16 @@ function FieldRenderer({
     return <DateField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
   }
   if (field.type === "dropdown") {
-    return <DropdownField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
+    const resolved = resolveFieldOptions(field, datasets)
+    return <DropdownField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} resolvedOptions={resolved?.labels} />
   }
   if (field.type === "radio") {
-    return <RadioField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
+    const resolved = resolveFieldOptions(field, datasets)
+    return <RadioField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} resolvedOptions={resolved?.labels} />
   }
   if (field.type === "multiselect") {
-    return <MultiSelectField field={field} value={value as string[]} onChange={(v) => onChange(v)} error={error} />
+    const resolved = resolveFieldOptions(field, datasets)
+    return <MultiSelectField field={field} value={value as string[]} onChange={(v) => onChange(v)} error={error} resolvedOptions={resolved?.labels} />
   }
   if (field.type === "checkbox") {
     return <CheckboxField field={field} value={value as string} onChange={(v) => onChange(v)} error={error} />
