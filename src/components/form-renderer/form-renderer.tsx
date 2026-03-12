@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2, CheckCircle2, LogIn, LogOut, BookmarkCheck, Bookmark } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -86,6 +87,7 @@ export function FormRenderer({ form }: FormRendererProps) {
   const inputFields = form.fields.filter((f) => !isLayoutField(f.type))
   const afterSubmit = form.settings?.after_submit ?? "thank_you"
   const redirectUrl = form.settings?.redirect_url ?? ""
+  const searchParams = useSearchParams()
 
   const [values, setValues] = useState<FormValues>(() => {
     // 1. Build initial values from field default_value
@@ -125,8 +127,28 @@ export function FormRenderer({ form }: FormRendererProps) {
       })
     }
 
+    // 3. URL prefill — highest priority. Supports ?fieldId=value for any field
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      params.forEach((value, key) => {
+        if (key in initial) {
+          initial[key] = value
+        }
+      })
+    }
+
     return initial
   })
+
+  const prefillFieldIds = useMemo(() => {
+    if (typeof window === "undefined") return new Set<string>()
+    const params = new URLSearchParams(window.location.search)
+    const ids = new Set<string>()
+    params.forEach((_, key) => {
+      if (inputFields.some((f) => f.id === key)) ids.add(key)
+    })
+    return ids
+  }, [inputFields])
 
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
@@ -305,18 +327,33 @@ export function FormRenderer({ form }: FormRendererProps) {
               if (isLayoutField(f.type) && !f.conditions) return true
               return visibleFieldIds.has(f.id)
             })
-            .map((field) => (
-              <div key={field.id} id={`field-${field.id}`}>
-                <FieldRenderer
-                  field={field}
-                  value={isLayoutField(field.type) ? "" : values[field.id]}
-                  error={errors[field.id]}
-                  onChange={(val) => setValue(field.id, val)}
-                  datasets={datasets}
-                  allValues={values}
-                />
-              </div>
-            ))}
+            .map((field) => {
+              if (prefillFieldIds.has(field.id)) {
+                const val = values[field.id]
+                const display = Array.isArray(val) ? val.join(", ") : String(val)
+                if (!display) return null
+                return (
+                  <div key={field.id} id={`field-${field.id}`}
+                    className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex items-center justify-between"
+                  >
+                    <span className="text-sm font-medium text-blue-800">{field.label}</span>
+                    <span className="text-sm font-bold text-blue-900">{display}</span>
+                  </div>
+                )
+              }
+              return (
+                <div key={field.id} id={`field-${field.id}`}>
+                  <FieldRenderer
+                    field={field}
+                    value={isLayoutField(field.type) ? "" : values[field.id]}
+                    error={errors[field.id]}
+                    onChange={(val) => setValue(field.id, val)}
+                    datasets={datasets}
+                    allValues={values}
+                  />
+                </div>
+              )
+            })}
         </div>
 
         {/* Remember button — shown above submit when saveable fields exist */}
