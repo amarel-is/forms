@@ -439,7 +439,7 @@ export async function computeAIField(input: {
     const client = new OpenAI({ apiKey })
 
     const completion = await client.chat.completions.create({
-      model: (input.model && input.model !== "$undefined") ? input.model : "gpt-5-mini",
+      model: (input.model && input.model !== "$undefined") ? input.model : "gpt-4.1-mini",
       messages: [
         {
           role: "system",
@@ -447,7 +447,7 @@ export async function computeAIField(input: {
         },
         { role: "user", content: resolvedPrompt },
       ],
-      max_completion_tokens: 1024,
+      max_tokens: 1024,
     })
 
     const text = completion.choices[0]?.message?.content?.trim()
