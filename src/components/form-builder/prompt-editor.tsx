@@ -59,28 +59,27 @@ export function PromptEditor({
       )}
       style={{ minHeight: 120 }}
     >
-      {/* highlighted backdrop */}
+      {/* highlighted backdrop — renders colored text below the transparent textarea */}
       <div
         ref={backdropRef}
         aria-hidden
         dir={dir}
-        className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none"
+        className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none select-none"
         style={{
           padding: "8px 12px",
           fontSize: 14,
           lineHeight: "1.6",
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
-          color: "transparent",
           fontFamily: "inherit",
+          color: "hsl(var(--foreground))",
         }}
       >
         {renderHighlighted(value || "")}
-        {/* trailing space so last-line height is preserved */}
         {"\u200b"}
       </div>
 
-      {/* real textarea — transparent text so backdrop shows through */}
+      {/* real textarea — text is invisible so backdrop shows through */}
       <textarea
         ref={textareaRef}
         value={value}
@@ -89,10 +88,10 @@ export function PromptEditor({
         placeholder={placeholder}
         dir={dir}
         rows={5}
-        className="relative w-full rounded-xl bg-transparent resize-none outline-none p-[8px_12px] text-sm leading-[1.6] caret-foreground placeholder:text-muted-foreground"
+        className="relative w-full rounded-xl bg-transparent resize-none outline-none p-[8px_12px] text-sm leading-[1.6] placeholder:text-muted-foreground"
         style={{
-          color: value ? "rgba(0,0,0,0)" : undefined,
-          caretColor: "var(--foreground, #111)",
+          color: "transparent",
+          caretColor: "hsl(var(--foreground))",
           fontFamily: "inherit",
           minHeight: 120,
         }}
