@@ -632,30 +632,16 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
               onChange={(val) => update({ prompt_template: val })}
               placeholder={"השתמש ב-{{תווית שדה}} כדי להזריק ערכים.\n\nלדוגמה:\nחשב איזה ציוד מיחשוב העובד צריך על סמך דרג {{דרג עובד}} ואחוזי משרה {{אחוזי משרה}}."}
               dir="rtl"
+              fields={allFields
+                .filter((f) => !isLayoutField(f.type) && f.id !== field.id && f.label)
+                .map((f) => ({ id: f.label, display: f.label }))}
             />
+            {allFields.filter((f) => !isLayoutField(f.type) && f.id !== field.id && f.label).length > 0 && (
+              <p className="text-[11px] text-neutral-400">
+                הקלד <span className="font-mono bg-neutral-100 px-1 rounded">{"{"}</span> לבחירת שדה מהרשימה
+              </p>
+            )}
           </div>
-
-          {allFields.filter((f) => !isLayoutField(f.type) && f.id !== field.id).length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-[11px] text-neutral-500">שדות זמינים להזרקה</Label>
-              <div className="flex flex-wrap gap-1">
-                {allFields
-                  .filter((f) => !isLayoutField(f.type) && f.id !== field.id && f.label)
-                  .map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => update({
-                        prompt_template: (field.prompt_template ?? "") + `{{${f.label}}}`,
-                      })}
-                      className="text-[10px] px-2 py-1 rounded-md bg-violet-50 text-violet-600 border border-violet-200 hover:bg-violet-100 transition-colors"
-                    >
-                      {`{{${f.label}}}`}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          )}
 
           <div className="bg-violet-50 rounded-xl border border-violet-200 p-3">
             <p className="text-xs text-violet-600">
