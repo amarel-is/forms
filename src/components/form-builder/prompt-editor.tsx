@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useCallback } from "react"
+import { useRef, useCallback, useEffect } from "react"
 import { cn } from "@/lib/utils"
 
 interface PromptEditorProps {
@@ -67,10 +67,21 @@ export function PromptEditor({
     }
   }, [])
 
+  const autoGrow = useCallback(() => {
+    const ta = textareaRef.current
+    if (!ta) return
+    ta.style.height = "auto"
+    ta.style.height = `${Math.max(120, ta.scrollHeight)}px`
+  }, [])
+
+  useEffect(() => {
+    autoGrow()
+  }, [value, autoGrow])
+
   return (
     <div
       className={cn(
-        "relative rounded-xl border border-input bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring overflow-hidden",
+        "relative rounded-xl border border-input bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring",
         className
       )}
       style={{ minHeight: 120 }}
@@ -99,7 +110,10 @@ export function PromptEditor({
       <textarea
         ref={textareaRef}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value)
+          autoGrow()
+        }}
         onScroll={syncScroll}
         placeholder={placeholder}
         dir={dir}
