@@ -8,6 +8,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { PromptEditor } from "./prompt-editor"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
@@ -626,11 +627,10 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
             <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
               פרומפט AI
             </Label>
-            <Textarea
+            <PromptEditor
               value={field.prompt_template ?? ""}
-              onChange={(e) => update({ prompt_template: e.target.value })}
+              onChange={(val) => update({ prompt_template: val })}
               placeholder={"השתמש ב-{{תווית שדה}} כדי להזריק ערכים.\n\nלדוגמה:\nחשב איזה ציוד מיחשוב העובד צריך על סמך דרג {{דרג עובד}} ואחוזי משרה {{אחוזי משרה}}."}
-              className="min-h-[120px] rounded-xl text-sm resize-none font-mono"
               dir="rtl"
             />
           </div>
