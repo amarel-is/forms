@@ -84,6 +84,42 @@ create trigger on_new_response_notify
   execute function notify_form_owner_on_response();
 
 -- ─────────────────────────────────────────────
+-- PUBLIC SUBMISSION RPC
+-- ─────────────────────────────────────────────
+create or replace function submit_response_public(
+  p_form_id uuid,
+  p_data jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = 'public'
+as $$
+declare
+  v_response_id uuid;
+begin
+  -- Allow submission only for published forms, or by the form owner.
+  if not exists (
+    select 1
+    from forms f
+    where f.id = p_form_id
+      and (f.is_published = true or f.user_id = auth.uid())
+  ) then
+    return null;
+  end if;
+
+  insert into responses (form_id, data)
+  values (p_form_id, coalesce(p_data, '{}'::jsonb))
+  returning id into v_response_id;
+
+  return v_response_id;
+end;
+$$;
+
+revoke all on function submit_response_public(uuid, jsonb) from public;
+grant execute on function submit_response_public(uuid, jsonb) to anon, authenticated;
+
+-- ─────────────────────────────────────────────
 -- APPROVAL tables (form_type = 'approval')
 -- ─────────────────────────────────────────────
 create table if not exists response_approvals (
@@ -399,6 +435,10 @@ create policy "responses_insert_public" on responses for insert with check (true
 drop policy if exists "responses_select_owner" on responses;
 create policy "responses_select_owner" on responses for select using (
   exists (select 1 from forms where forms.id = responses.form_id and forms.user_id = auth.uid())
+);
+drop policy if exists "responses_select_insert_post" on responses;
+create policy "responses_select_insert_post" on responses for select using (
+  current_setting('request.method', true) = 'POST'
 );
 
 drop policy if exists "notifications_select_owner" on notifications;

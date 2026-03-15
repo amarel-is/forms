@@ -10,24 +10,39 @@ export async function submitResponse(
   data: Record<string, string | string[]>
 ): Promise<{ success?: boolean; error?: string; warning?: string }> {
   const supabase = await createClient()
+  let responseId: string | null = null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inserted, error } = await (supabase as any)
-    .from("responses")
-    .insert({ form_id: formId, data })
-    .select("id")
-    .single()
+  const { data: rpcResponseId, error: rpcError } = await (supabase as any).rpc(
+    "submit_response_public",
+    {
+      p_form_id: formId,
+      p_data: data,
+    }
+  )
 
-  if (error) return { error: error.message }
+  // Backward-compatible fallback for environments where the RPC is not deployed yet.
+  if (rpcError) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: insertError } = await (supabase as any)
+      .from("responses")
+      .insert({ form_id: formId, data })
+    if (insertError) return { error: insertError.message }
+  } else {
+    responseId = (rpcResponseId as string | null) ?? null
+    if (!responseId) {
+      return { error: "הטופס אינו זמין כרגע לקבלת תגובות." }
+    }
+  }
 
-  if (inserted?.id) {
+  if (responseId) {
     // Fire response_submitted webhooks (non-blocking)
     fireWebhooks(formId, "response_submitted", {
-      response_id: inserted.id as string,
+      response_id: responseId,
       response_data: data,
     }).catch(() => {})
 
-    const result = await initializeApprovalForResponse(inserted.id as string)
+    const result = await initializeApprovalForResponse(responseId)
     if (!result.created && result.reason && result.reason !== "workflow_disabled" && result.reason !== "not_approval_form") {
       return { success: true, warning: "התגובה נשמרה אך יצירת סבב האישור נכשלה." }
     }
