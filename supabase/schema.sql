@@ -96,7 +96,12 @@ security definer
 set search_path = 'public'
 as $$
 declare
-  v_response_id uuid;
+  v_response_id    uuid;
+  v_settings       jsonb;
+  v_limit_field_id text;
+  v_limit_count    integer;
+  v_submitted_val  text;
+  v_existing_count bigint;
 begin
   -- Allow submission only for published forms, or by the form owner.
   if not exists (
@@ -106,6 +111,37 @@ begin
       and (f.is_published = true or f.user_id = auth.uid())
   ) then
     return null;
+  end if;
+
+  -- Check submission limit by unique field identifier.
+  select f.settings into v_settings from forms f where f.id = p_form_id;
+  v_limit_field_id := v_settings->>'submission_limit_field_id';
+  v_limit_count    := coalesce((v_settings->>'submission_limit_count')::integer, 1);
+
+  if v_limit_field_id is not null and v_limit_field_id <> '' then
+    -- Extract the submitted value for the limit field (handle both scalar and array).
+    if jsonb_typeof(p_data->v_limit_field_id) = 'array' then
+      v_submitted_val := coalesce(p_data->v_limit_field_id->>0, '');
+    else
+      v_submitted_val := coalesce(p_data->>v_limit_field_id, '');
+    end if;
+
+    if v_submitted_val <> '' then
+      select count(*) into v_existing_count
+      from responses r
+      where r.form_id = p_form_id
+        and (
+          case
+            when jsonb_typeof(r.data->v_limit_field_id) = 'array'
+              then r.data->v_limit_field_id->>0
+            else r.data->>v_limit_field_id
+          end
+        ) = v_submitted_val;
+
+      if v_existing_count >= v_limit_count then
+        raise exception 'submission_limit_exceeded';
+      end if;
+    end if;
   end if;
 
   insert into responses (form_id, data)
@@ -439,6 +475,10 @@ create policy "responses_select_owner" on responses for select using (
 drop policy if exists "responses_select_insert_post" on responses;
 create policy "responses_select_insert_post" on responses for select using (
   current_setting('request.method', true) = 'POST'
+);
+drop policy if exists "responses_delete_owner" on responses;
+create policy "responses_delete_owner" on responses for delete using (
+  exists (select 1 from forms where forms.id = responses.form_id and forms.user_id = auth.uid())
 );
 
 drop policy if exists "notifications_select_owner" on notifications;

@@ -23,6 +23,10 @@ export async function submitResponse(
 
   // Backward-compatible fallback for environments where the RPC is not deployed yet.
   if (rpcError) {
+    // Submission limit exceeded — return user-friendly error, do not fall through to direct insert.
+    if (rpcError.message === "submission_limit_exceeded") {
+      return { error: "הגשת כבר את הטופס עם מזהה זה." }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: insertError } = await (supabase as any)
       .from("responses")
@@ -47,6 +51,40 @@ export async function submitResponse(
       return { success: true, warning: "התגובה נשמרה אך יצירת סבב האישור נכשלה." }
     }
   }
+
+  return { success: true }
+}
+
+export async function deleteAllResponses(
+  formId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) return { error: "Unauthorized" }
+
+  // Verify ownership first
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: formRow } = await (supabase as any)
+    .from("forms")
+    .select("id")
+    .eq("id", formId)
+    .eq("user_id", user.id)
+    .single()
+
+  if (!formRow) return { error: "הטופס לא נמצא" }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("responses")
+    .delete()
+    .eq("form_id", formId)
+
+  if (error) return { error: error.message }
 
   return { success: true }
 }

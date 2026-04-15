@@ -153,6 +153,9 @@ export interface FormSettings {
   hide_branding?: boolean         // hide "מופעל על ידי אמרל טפסים" in public/embed views
   approval_workflow?: ApprovalWorkflow
   approval_field_visibility?: ApprovalFieldVisibility
+  submission_limit_field_id?: string  // field whose value is the unique identifier for limiting submissions
+  submission_limit_count?: number     // max submissions allowed per unique value (default: 1)
+  submission_limit_error_message?: string // custom error shown when limit is exceeded
 }
 
 // ─── Per-form datasets ("mini databases") ────────────────────────────────────

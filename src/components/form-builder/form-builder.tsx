@@ -152,6 +152,15 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const [hideBranding, setHideBranding] = useState(
     initialForm?.settings?.hide_branding ?? false
   )
+  const [submissionLimitFieldId, setSubmissionLimitFieldId] = useState(
+    initialForm?.settings?.submission_limit_field_id ?? ""
+  )
+  const [submissionLimitCount, setSubmissionLimitCount] = useState(
+    initialForm?.settings?.submission_limit_count ?? 1
+  )
+  const [submissionLimitErrorMessage, setSubmissionLimitErrorMessage] = useState(
+    initialForm?.settings?.submission_limit_error_message ?? ""
+  )
   const [aiChatOpen, setAiChatOpen] = useState(false)
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false)
 
@@ -169,6 +178,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       redirectUrl: initialForm?.settings?.redirect_url ?? "",
       titleAlign: initialForm?.settings?.title_align ?? "right",
       hideBranding: initialForm?.settings?.hide_branding ?? false,
+      submissionLimitFieldId: initialForm?.settings?.submission_limit_field_id ?? "",
+      submissionLimitCount: initialForm?.settings?.submission_limit_count ?? 1,
+      submissionLimitErrorMessage: initialForm?.settings?.submission_limit_error_message ?? "",
     })
   )
 
@@ -176,9 +188,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     const current = JSON.stringify({
       name, description, fields, formType, submitLabel,
       afterSubmit, redirectUrl, titleAlign, hideBranding,
+      submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
     })
     return current !== savedSnapshotRef.current
-  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding])
+  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage])
 
   useUnsavedChanges(isDirty)
 
@@ -373,6 +386,11 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
             redirect_url: afterSubmit === "redirect" ? redirectUrl.trim() || undefined : undefined,
             title_align: titleAlign,
             hide_branding: hideBranding || undefined,
+            ...(submissionLimitFieldId ? {
+              submission_limit_field_id: submissionLimitFieldId,
+              submission_limit_count: submissionLimitCount,
+              ...(submissionLimitErrorMessage.trim() ? { submission_limit_error_message: submissionLimitErrorMessage.trim() } : {}),
+            } : {}),
             ...(dirField && { attendance_direction_field: dirField.id }),
             ...(idField && { attendance_id_field: idField.id }),
             ...(formType === "approval" ? {
@@ -415,6 +433,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         savedSnapshotRef.current = JSON.stringify({
           name, description, fields, formType, submitLabel,
           afterSubmit, redirectUrl, titleAlign, hideBranding,
+          submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
         })
 
         if (publish !== undefined) {
@@ -431,7 +450,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         setPublishing(false)
       }
     },
-    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
+    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
   )
 
   return (
@@ -875,6 +894,59 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                         className="h-9 rounded-xl text-xs mt-1"
                         dir="ltr"
                       />
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Submission limit by unique field */}
+                  <div className="space-y-2.5">
+                    <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
+                      הגבלת הגשות לפי מזהה
+                    </Label>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">
+                      מנע הגשות כפולות לפי ערך שדה ייחודי (למשל תעודת זהות, מספר טלפון).
+                    </p>
+                    <Select
+                      value={submissionLimitFieldId || "__none__"}
+                      onValueChange={(v) => {
+                        setSubmissionLimitFieldId(v === "__none__" ? "" : v)
+                        if (v === "__none__") setSubmissionLimitCount(1)
+                      }}
+                    >
+                      <SelectTrigger className="h-9 rounded-xl text-xs">
+                        <SelectValue placeholder="ללא הגבלה" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">ללא הגבלה</SelectItem>
+                        {fields
+                          .filter((f) => !isLayoutField(f.type))
+                          .map((f) => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.label || `שדה (${f.type})`}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {submissionLimitFieldId && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-neutral-600 shrink-0">מקסימום הגשות למזהה</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={submissionLimitCount}
+                            onChange={(e) => setSubmissionLimitCount(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="h-8 w-20 rounded-lg text-xs text-center"
+                          />
+                        </div>
+                        <Input
+                          value={submissionLimitErrorMessage}
+                          onChange={(e) => setSubmissionLimitErrorMessage(e.target.value)}
+                          placeholder={`הודעת שגיאה מותאמת (אופציונלי)`}
+                          className="h-8 rounded-lg text-xs"
+                        />
+                      </div>
                     )}
                   </div>
 

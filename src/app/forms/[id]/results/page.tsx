@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { ResponsesTable } from "@/components/results/responses-table"
 import { FieldStats } from "@/components/results/field-stats"
 import { ExportButton } from "@/components/results/export-button"
+import { ResetResponsesButton } from "@/components/results/reset-responses-button"
 import { CopyLinkButton } from "@/components/results/copy-link-button"
 import { ShareFormDialog } from "@/components/results/share-form-dialog"
 import { AppHeader } from "@/components/layout/amarel-nav"
@@ -163,13 +164,16 @@ export default async function ResultsPage({ params }: Props) {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-neutral-700">כל התגובות</h2>
-            <ExportButton
-              fields={form.fields}
-              responses={responses}
-              formName={form.name}
-              approvalsByResponseId={approvalsByResponseId}
-              showApprovalColumns={isApproval}
-            />
+            <div className="flex items-center gap-2">
+              <ResetResponsesButton formId={id} responseCount={responses.length} />
+              <ExportButton
+                fields={form.fields}
+                responses={responses}
+                formName={form.name}
+                approvalsByResponseId={approvalsByResponseId}
+                showApprovalColumns={isApproval}
+              />
+            </div>
           </div>
           <ResponsesTable
             fields={form.fields}
