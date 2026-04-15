@@ -180,6 +180,7 @@ export default async function ResultsPage({ params }: Props) {
             responses={responses}
             approvalsByResponseId={approvalsByResponseId}
             showApprovalColumns={isApproval}
+            formId={id}
           />
         </div>
       </main>

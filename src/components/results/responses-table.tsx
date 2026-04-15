@@ -1,5 +1,8 @@
 "use client"
 
+import { useState, useTransition } from "react"
+import { Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 import {
   Table,
   TableBody,
@@ -9,6 +12,18 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { deleteResponse } from "@/lib/actions/responses"
 import type { FieldConfig, FormResponse, ResponseApproval, ApprovalStatus } from "@/lib/types"
 
 interface ResponsesTableProps {
@@ -18,6 +33,7 @@ interface ResponsesTableProps {
   showApprovalColumns?: boolean
   /** When false, cells are wider and text wraps instead of truncating (e.g. in dialog) */
   compact?: boolean
+  formId?: string
 }
 
 const APPROVAL_LABEL: Record<ApprovalStatus, string> = {
@@ -36,7 +52,20 @@ const APPROVAL_CLASS: Record<ApprovalStatus, string> = {
   expired: "bg-neutral-100 text-neutral-600 border-neutral-200",
 }
 
-export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, showApprovalColumns = false, compact = true }: ResponsesTableProps) {
+export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, showApprovalColumns = false, compact = true, formId }: ResponsesTableProps) {
+  const router = useRouter()
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  function handleDelete() {
+    if (!pendingDeleteId || !formId) return
+    startTransition(async () => {
+      await deleteResponse(pendingDeleteId, formId)
+      setPendingDeleteId(null)
+      router.refresh()
+    })
+  }
+
   if (responses.length === 0) {
     return (
       <div className="text-center py-12 text-neutral-400 text-sm">
@@ -63,71 +92,110 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-neutral-200">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-neutral-50">
-            <TableHead className="text-xs font-semibold text-neutral-500 w-32 text-right">
-              זמן שליחה
-            </TableHead>
-            {showApprovalColumns && (
-              <>
-                <TableHead className="text-xs font-semibold text-neutral-500 min-w-[110px] text-right">סטטוס אישור</TableHead>
-                <TableHead className="text-xs font-semibold text-neutral-500 min-w-[90px] text-right">שלב</TableHead>
-              </>
-            )}
-            {fields.map((f) => (
-              <TableHead
-                key={f.id}
-                className={`text-xs font-semibold text-neutral-500 text-right ${
-                  compact ? "min-w-[140px]" : "min-w-[160px]"
-                }`}
-              >
-                {f.label || "ללא שם"}
+    <>
+      <div className="overflow-x-auto rounded-xl border border-neutral-200">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-neutral-50">
+              <TableHead className="text-xs font-semibold text-neutral-500 w-32 text-right">
+                זמן שליחה
               </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {responses.map((response) => (
-            <TableRow key={response.id} className="hover:bg-neutral-50">
-              <TableCell className="text-xs text-neutral-500 whitespace-nowrap text-right">
-                {new Date(response.submitted_at).toLocaleDateString("he-IL", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </TableCell>
-              {showApprovalColumns && (() => {
-                const appr = approvalsByResponseId[response.id]
-                return (
-                  <>
-                    <TableCell className="text-right">
-                      {appr ? (
-                        <Badge className={`rounded-md border text-xs ${APPROVAL_CLASS[appr.status]}`}>
-                          {APPROVAL_LABEL[appr.status]}
-                        </Badge>
-                      ) : <span className="text-neutral-300">—</span>}
-                    </TableCell>
-                    <TableCell className="text-right text-xs text-neutral-600">
-                      {appr ? `${appr.current_step_index + 1}/${Math.max(appr.steps.length, 1)}` : "—"}
-                    </TableCell>
-                  </>
-                )
-              })()}
+              {showApprovalColumns && (
+                <>
+                  <TableHead className="text-xs font-semibold text-neutral-500 min-w-[110px] text-right">סטטוס אישור</TableHead>
+                  <TableHead className="text-xs font-semibold text-neutral-500 min-w-[90px] text-right">שלב</TableHead>
+                </>
+              )}
               {fields.map((f) => (
-                <TableCell
+                <TableHead
                   key={f.id}
-                  className={`text-right ${compact ? "max-w-[200px] truncate" : "min-w-[160px] max-w-[320px] break-words whitespace-normal"}`}
+                  className={`text-xs font-semibold text-neutral-500 text-right ${
+                    compact ? "min-w-[140px]" : "min-w-[160px]"
+                  }`}
                 >
-                  {formatValue(response.data[f.id])}
-                </TableCell>
+                  {f.label || "ללא שם"}
+                </TableHead>
               ))}
+              {formId && <TableHead className="w-10" />}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {responses.map((response) => (
+              <TableRow key={response.id} className="hover:bg-neutral-50 group">
+                <TableCell className="text-xs text-neutral-500 whitespace-nowrap text-right">
+                  {new Date(response.submitted_at).toLocaleDateString("he-IL", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </TableCell>
+                {showApprovalColumns && (() => {
+                  const appr = approvalsByResponseId[response.id]
+                  return (
+                    <>
+                      <TableCell className="text-right">
+                        {appr ? (
+                          <Badge className={`rounded-md border text-xs ${APPROVAL_CLASS[appr.status]}`}>
+                            {APPROVAL_LABEL[appr.status]}
+                          </Badge>
+                        ) : <span className="text-neutral-300">—</span>}
+                      </TableCell>
+                      <TableCell className="text-right text-xs text-neutral-600">
+                        {appr ? `${appr.current_step_index + 1}/${Math.max(appr.steps.length, 1)}` : "—"}
+                      </TableCell>
+                    </>
+                  )
+                })()}
+                {fields.map((f) => (
+                  <TableCell
+                    key={f.id}
+                    className={`text-right ${compact ? "max-w-[200px] truncate" : "min-w-[160px] max-w-[320px] break-words whitespace-normal"}`}
+                  >
+                    {formatValue(response.data[f.id])}
+                  </TableCell>
+                ))}
+                {formId && (
+                  <TableCell className="text-center p-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-opacity"
+                      onClick={() => setPendingDeleteId(response.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת תגובה</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם למחוק את התגובה לצמיתות? לא ניתן לשחזר פעולה זו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel disabled={isPending}>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
+              disabled={isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isPending ? "מוחק..." : "מחק"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

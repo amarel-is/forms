@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__list_migrations",
+      "Bash(grep -r \"create table.*sites\\\\|create table.*categories\\\\|ops\\\\.\" 'c:/Users/Dolev.H/OneDrive - Amarel LTD/Documents/GitHub/dashboard/amarel-dashboards/src' --include=*.sql)",
+      "Bash(xargs grep:*)",
+      "Bash(npx shadcn@latest add alert-dialog --yes)",
+      "Bash(node -e \"const r = require\\('c:/Users/Dolev.H/OneDrive - Amarel LTD/Documents/GitHub/forms/node_modules/radix-ui'\\); console.log\\(Object.keys\\(r\\).filter\\(k => k.includes\\('Alert'\\)\\)\\)\")",
+      "mcp__supabase__apply_migration"
+    ]
+  }
+}

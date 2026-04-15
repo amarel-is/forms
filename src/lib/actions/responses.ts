@@ -55,6 +55,31 @@ export async function submitResponse(
   return { success: true }
 }
 
+export async function deleteResponse(
+  responseId: string,
+  formId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) return { error: "Unauthorized" }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("responses")
+    .delete()
+    .eq("id", responseId)
+    .eq("form_id", formId)
+
+  if (error) return { error: error.message }
+
+  return { success: true }
+}
+
 export async function deleteAllResponses(
   formId: string
 ): Promise<{ success?: boolean; error?: string }> {
