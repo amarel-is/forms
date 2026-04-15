@@ -156,6 +156,8 @@ export interface FormSettings {
   submission_limit_field_id?: string  // field whose value is the unique identifier for limiting submissions
   submission_limit_count?: number     // max submissions allowed per unique value (default: 1)
   submission_limit_error_message?: string // custom error shown when limit is exceeded
+  submission_start_date?: string      // YYYY-MM-DD — form not open before this date (Israel timezone)
+  submission_end_date?: string        // YYYY-MM-DD — form closed after this date (Israel timezone)
 }
 
 // ─── Per-form datasets ("mini databases") ────────────────────────────────────

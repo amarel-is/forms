@@ -23,9 +23,15 @@ export async function submitResponse(
 
   // Backward-compatible fallback for environments where the RPC is not deployed yet.
   if (rpcError) {
-    // Submission limit exceeded — return user-friendly error, do not fall through to direct insert.
+    // Known domain errors — return user-friendly messages, do not fall through to direct insert.
     if (rpcError.message === "submission_limit_exceeded") {
       return { error: "הגשת כבר את הטופס עם מזהה זה." }
+    }
+    if (rpcError.message === "submission_not_yet_open") {
+      return { error: "הטופס טרם נפתח להגשה." }
+    }
+    if (rpcError.message === "submission_deadline_passed") {
+      return { error: "המועד האחרון להגשת הטופס עבר." }
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: insertError } = await (supabase as any)

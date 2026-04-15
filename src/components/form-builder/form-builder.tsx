@@ -161,6 +161,12 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const [submissionLimitErrorMessage, setSubmissionLimitErrorMessage] = useState(
     initialForm?.settings?.submission_limit_error_message ?? ""
   )
+  const [submissionStartDate, setSubmissionStartDate] = useState(
+    initialForm?.settings?.submission_start_date ?? ""
+  )
+  const [submissionEndDate, setSubmissionEndDate] = useState(
+    initialForm?.settings?.submission_end_date ?? ""
+  )
   const [aiChatOpen, setAiChatOpen] = useState(false)
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false)
 
@@ -181,6 +187,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       submissionLimitFieldId: initialForm?.settings?.submission_limit_field_id ?? "",
       submissionLimitCount: initialForm?.settings?.submission_limit_count ?? 1,
       submissionLimitErrorMessage: initialForm?.settings?.submission_limit_error_message ?? "",
+      submissionStartDate: initialForm?.settings?.submission_start_date ?? "",
+      submissionEndDate: initialForm?.settings?.submission_end_date ?? "",
     })
   )
 
@@ -189,9 +197,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       name, description, fields, formType, submitLabel,
       afterSubmit, redirectUrl, titleAlign, hideBranding,
       submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
+      submissionStartDate, submissionEndDate,
     })
     return current !== savedSnapshotRef.current
-  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage])
+  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate])
 
   useUnsavedChanges(isDirty)
 
@@ -391,6 +400,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
               submission_limit_count: submissionLimitCount,
               ...(submissionLimitErrorMessage.trim() ? { submission_limit_error_message: submissionLimitErrorMessage.trim() } : {}),
             } : {}),
+            ...(submissionStartDate ? { submission_start_date: submissionStartDate } : {}),
+            ...(submissionEndDate ? { submission_end_date: submissionEndDate } : {}),
             ...(dirField && { attendance_direction_field: dirField.id }),
             ...(idField && { attendance_id_field: idField.id }),
             ...(formType === "approval" ? {
@@ -434,6 +445,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           name, description, fields, formType, submitLabel,
           afterSubmit, redirectUrl, titleAlign, hideBranding,
           submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
+          submissionStartDate, submissionEndDate,
         })
 
         if (publish !== undefined) {
@@ -450,7 +462,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         setPublishing(false)
       }
     },
-    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
+    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
   )
 
   return (
@@ -894,6 +906,68 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                         className="h-9 rounded-xl text-xs mt-1"
                         dir="ltr"
                       />
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Submission date window */}
+                  <div className="space-y-2.5">
+                    <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
+                      חלון זמן להגשה
+                    </Label>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">
+                      הגבל את הטופס לתקופה מסוימת. השאר ריק כדי לאפשר הגשה בכל עת.
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-neutral-600 shrink-0 w-14">מתאריך</Label>
+                        <Input
+                          type="date"
+                          value={submissionStartDate}
+                          onChange={(e) => setSubmissionStartDate(e.target.value)}
+                          className="h-8 rounded-lg text-xs flex-1"
+                          dir="ltr"
+                        />
+                        {submissionStartDate && (
+                          <button
+                            type="button"
+                            onClick={() => setSubmissionStartDate("")}
+                            className="text-neutral-300 hover:text-neutral-500 shrink-0"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-neutral-600 shrink-0 w-14">עד תאריך</Label>
+                        <Input
+                          type="date"
+                          value={submissionEndDate}
+                          onChange={(e) => setSubmissionEndDate(e.target.value)}
+                          min={submissionStartDate || undefined}
+                          className="h-8 rounded-lg text-xs flex-1"
+                          dir="ltr"
+                        />
+                        {submissionEndDate && (
+                          <button
+                            type="button"
+                            onClick={() => setSubmissionEndDate("")}
+                            className="text-neutral-300 hover:text-neutral-500 shrink-0"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {(submissionStartDate || submissionEndDate) && (
+                      <p className="text-[11px] text-blue-500">
+                        {submissionStartDate && submissionEndDate
+                          ? `הגשות יתקבלו בין ${submissionStartDate} ל-${submissionEndDate}`
+                          : submissionStartDate
+                          ? `הגשות יתקבלו החל מ-${submissionStartDate}`
+                          : `הגשות יתקבלו עד ${submissionEndDate}`}
+                      </p>
                     )}
                   </div>
 

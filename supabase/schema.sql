@@ -102,6 +102,9 @@ declare
   v_limit_count    integer;
   v_submitted_val  text;
   v_existing_count bigint;
+  v_start_date     text;
+  v_end_date       text;
+  v_today_il       text;
 begin
   -- Allow submission only for published forms, or by the form owner.
   if not exists (
@@ -113,8 +116,22 @@ begin
     return null;
   end if;
 
-  -- Check submission limit by unique field identifier.
   select f.settings into v_settings from forms f where f.id = p_form_id;
+
+  -- Check submission date window (Israel time UTC+3).
+  v_start_date := v_settings->>'submission_start_date';
+  v_end_date   := v_settings->>'submission_end_date';
+  v_today_il   := to_char(now() at time zone 'Asia/Jerusalem', 'YYYY-MM-DD');
+
+  if v_start_date is not null and v_start_date <> '' and v_today_il < v_start_date then
+    raise exception 'submission_not_yet_open';
+  end if;
+
+  if v_end_date is not null and v_end_date <> '' and v_today_il > v_end_date then
+    raise exception 'submission_deadline_passed';
+  end if;
+
+  -- Check submission limit by unique field identifier.
   v_limit_field_id := v_settings->>'submission_limit_field_id';
   v_limit_count    := coalesce((v_settings->>'submission_limit_count')::integer, 1);
 
