@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { createClient } from "@/lib/supabase/server"
+import { getAuthContext } from "@/lib/supabase/auth-context"
 import { rowToForm, rowToResponse, computePresence } from "@/lib/types"
 import { CopyLinkButton } from "@/components/results/copy-link-button"
 import { AttendanceDateFilter } from "@/components/attendance/attendance-date-filter"
@@ -74,19 +75,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function AttendancePage({ params, searchParams }: Props) {
   const { id } = await params
   const { date: dateParam } = await searchParams
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-
-  const { data: { user } } = await supabase.auth.getUser()
+  const { user, isSuperadmin, db: sb } = await getAuthContext()
   if (!user) redirect("/login")
 
-  const { data: formRow, error: formError } = await sb
-    .from("forms")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single()
+  let formQuery = sb.from("forms").select("*").eq("id", id)
+  if (!isSuperadmin) formQuery = formQuery.eq("user_id", user.id)
+  const { data: formRow, error: formError } = await formQuery.single()
 
   if (formError || !formRow) notFound()
 

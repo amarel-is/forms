@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getAuthContext } from "@/lib/supabase/auth-context"
 import { initializeApprovalForResponse } from "@/lib/actions/approvals"
 import { fireWebhooks } from "@/lib/actions/webhooks"
 import { rowToResponse, type FormResponse } from "@/lib/types"
@@ -89,32 +90,17 @@ export async function deleteResponse(
 export async function deleteAllResponses(
   formId: string
 ): Promise<{ success?: boolean; error?: string }> {
-  const supabase = await createClient()
+  const { user, isSuperadmin, db } = await getAuthContext()
+  if (!user) return { error: "Unauthorized" }
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) return { error: "Unauthorized" }
-
-  // Verify ownership first
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: formRow } = await (supabase as any)
-    .from("forms")
-    .select("id")
-    .eq("id", formId)
-    .eq("user_id", user.id)
-    .single()
+  // Verify form exists and (unless superadmin) is owned by the user
+  let formQuery = db.from("forms").select("id").eq("id", formId)
+  if (!isSuperadmin) formQuery = formQuery.eq("user_id", user.id)
+  const { data: formRow } = await formQuery.single()
 
   if (!formRow) return { error: "הטופס לא נמצא" }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from("responses")
-    .delete()
-    .eq("form_id", formId)
-
+  const { error } = await db.from("responses").delete().eq("form_id", formId)
   if (error) return { error: error.message }
 
   return { success: true }
@@ -123,17 +109,10 @@ export async function deleteAllResponses(
 export async function getResponses(
   formId: string
 ): Promise<{ responses: FormResponse[]; error?: string }> {
-  const supabase = await createClient()
+  const { user, db } = await getAuthContext()
+  if (!user) return { error: "Unauthorized", responses: [] }
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) return { error: "Unauthorized", responses: [] }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rows, error } = await (supabase as any)
+  const { data: rows, error } = await db
     .from("responses")
     .select("*")
     .eq("form_id", formId)

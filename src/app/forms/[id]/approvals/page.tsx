@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator"
 import { AppHeader } from "@/components/layout/amarel-nav"
 import { CopyLinkButton } from "@/components/results/copy-link-button"
 import { createClient } from "@/lib/supabase/server"
+import { getAuthContext } from "@/lib/supabase/auth-context"
 import { getResponseApprovalsByForm } from "@/lib/actions/approvals"
 import {
   rowToForm,
@@ -70,19 +71,12 @@ const STEP_STATUS_CONFIG: Record<ApprovalStepStatus, { label: string; class: str
 export default async function ApprovalsPage({ params, searchParams }: Props) {
   const { id } = await params
   const { filter } = await searchParams
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-
-  const { data: { user } } = await supabase.auth.getUser()
+  const { user, isSuperadmin, db: sb } = await getAuthContext()
   if (!user) redirect("/login")
 
-  const { data: formRow, error: formError } = await sb
-    .from("forms")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single()
+  let formQuery = sb.from("forms").select("*").eq("id", id)
+  if (!isSuperadmin) formQuery = formQuery.eq("user_id", user.id)
+  const { data: formRow, error: formError } = await formQuery.single()
 
   if (formError || !formRow) notFound()
 

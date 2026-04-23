@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { FormBuilder } from "@/components/form-builder/form-builder"
 import { createClient } from "@/lib/supabase/server"
+import { getAuthContext } from "@/lib/supabase/auth-context"
 import { rowToForm } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -27,20 +28,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function EditFormPage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { user, isSuperadmin, db } = await getAuthContext()
 
   if (!user) redirect("/login")
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: row, error } = await (supabase as any)
-    .from("forms")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single()
+  let query = db.from("forms").select("*").eq("id", id)
+  if (!isSuperadmin) query = query.eq("user_id", user.id)
+  const { data: row, error } = await query.single()
 
   if (error || !row) notFound()
 

@@ -11,18 +11,19 @@ export interface TemplateListItem {
   creatorEmail: string
 }
 
-/** Mark one of the user's own forms as an org-wide template. */
+/** Mark a form as an org-wide template. Owner can mark their own; superadmin can mark any. */
 export async function markAsTemplate(formId: string): Promise<{ success?: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) redirect("/login")
 
+  const isSuperadmin = user.user_metadata?.superadmin === true
+  const client = isSuperadmin ? createAdminClient() : supabase
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from("forms")
-    .update({ is_template: true })
-    .eq("id", formId)
-    .eq("user_id", user.id)
+  let query = (client as any).from("forms").update({ is_template: true }).eq("id", formId)
+  if (!isSuperadmin) query = query.eq("user_id", user.id)
+  const { error } = await query
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard")

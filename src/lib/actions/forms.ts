@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getAuthContext } from "@/lib/supabase/auth-context"
 import {
   rowToForm,
   type FieldConfig,
@@ -60,18 +61,12 @@ export async function updateForm(
     folder?: string | null
   }
 ): Promise<{ form?: Form; error?: string }> {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) redirect("/login")
+  const { user, isSuperadmin, db } = await getAuthContext()
+  if (!user) redirect("/login")
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: row, error } = await (supabase as any)
-    .from("forms")
-    .update(data)
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select()
-    .single()
+  let query = db.from("forms").update(data).eq("id", id)
+  if (!isSuperadmin) query = query.eq("user_id", user.id)
+  const { data: row, error } = await query.select().single()
 
   if (error) return { error: error.message }
 
@@ -81,16 +76,12 @@ export async function updateForm(
 }
 
 export async function deleteForm(id: string): Promise<{ success?: boolean; error?: string }> {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) redirect("/login")
+  const { user, isSuperadmin, db } = await getAuthContext()
+  if (!user) redirect("/login")
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from("forms")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id)
+  let query = db.from("forms").delete().eq("id", id)
+  if (!isSuperadmin) query = query.eq("user_id", user.id)
+  const { error } = await query
 
   if (error) return { error: error.message }
 
