@@ -622,17 +622,43 @@ const ReorderFieldParams = z.object({
   move_after_label: z.string().nullable(),
 })
 
+const UpdateFormSettingsParams = z.object({
+  form_type: z.enum(["general", "attendance", "approval"]).nullable(),
+  submit_label: z.string().nullable(),
+  submit_message: z.string().nullable(),
+  after_submit: z.enum(["thank_you", "redirect"]).nullable(),
+  redirect_url: z.string().nullable(),
+  hide_branding: z.boolean().nullable(),
+  submission_limit_field_id: z
+    .string()
+    .nullable()
+    .describe("Existing field id from context (used for per-value submission caps)"),
+  submission_limit_count: z.number().nullable(),
+  submission_limit_error_message: z.string().nullable(),
+  submission_start_date: z.string().nullable().describe("YYYY-MM-DD"),
+  submission_end_date: z.string().nullable(),
+})
+
+const SetApprovalWorkflowParams = z.object({
+  enabled: z.boolean(),
+  steps: z.array(AIApprovalStepSchema),
+})
+
 const EDITOR_SYSTEM_PROMPT = `You are an AI assistant inside a Hebrew form builder. The user can ask you to modify the form they are currently editing.
 
-You have 4 tools available:
-- add_fields: Add new fields to the form. Use the FULL field schema (all field types, conditions, validation, content, min/max, dataset lookups, AI computed, sections, etc. — same schema as one-shot form generation). When adding a conditional field referencing an EXISTING form field, use that field's id (shown next to each field below) as the field_key in the condition rule. Insert_after_label to place after a specific field.
-- update_field: Update properties of an existing field (find it by its label).
-- remove_field: Remove a field (find it by its label).
-- reorder_field: Move a field to a different position.
+Field-level tools:
+- add_fields: Add new fields. Use the FULL field schema (all types, conditions, validation, content, min/max, dataset lookups, AI computed, sections, etc.). When a new field's condition references an EXISTING form field, use that field's id (shown below) as the field_key.
+- update_field: Update an existing field's properties (find by label).
+- remove_field: Remove a field (find by label).
+- reorder_field: Move a field.
 
-The current form fields are provided below (each with its id — use id as a condition field_key when adding conditional fields referencing existing fields). When the user asks for changes, use the appropriate tool(s). You can call multiple tools in one response.
+Form-level tools:
+- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits per-ID, submission date window). Only pass the fields you want to change; leave the rest null. For submission_limit_field_id use the exact id of an existing field from the context below.
+- set_approval_workflow: Replace the entire approval workflow. Set enabled=true and provide the ordered list of steps. Each step has approver_name (Hebrew), channel ("email"|"whatsapp"), and source_type: "fixed" (target = email/phone), "from_field" (source_field_key = existing field id), or "from_option_map" (source_field_key + target_by_value array). To clear the workflow pass enabled=false with steps=[].
 
-If the user asks a question (not a modification), respond with text only - no tool calls.
+The current form fields appear below (each with its id — use the id as field_key / source_field_key / submission_limit_field_id in tool arguments). You can call multiple tools in one response.
+
+If the user asks a question (not a modification), respond with text only — no tool calls.
 
 ALWAYS respond in Hebrew. Set nullable fields you don't use to null.`
 
@@ -650,12 +676,33 @@ function serializeFieldsForContext(fields: FieldConfig[]): string {
     .join("\n")
 }
 
+export interface ChatSettingsUpdate {
+  form_type?: FormType
+  submit_label?: string
+  submit_message?: string
+  after_submit?: "thank_you" | "redirect"
+  redirect_url?: string
+  hide_branding?: boolean
+  submission_limit_field_id?: string
+  submission_limit_count?: number
+  submission_limit_error_message?: string
+  submission_start_date?: string
+  submission_end_date?: string
+}
+
 function applyToolCalls(
   fields: FieldConfig[],
   toolCalls: Array<{ name: string; args: unknown }>
-): { fields: FieldConfig[]; summary: string[] } {
+): {
+  fields: FieldConfig[]
+  summary: string[]
+  settings?: ChatSettingsUpdate
+  approvalSteps?: ApprovalWorkflow["steps"] | null
+} {
   let result = [...fields]
   const summary: string[] = []
+  let settings: ChatSettingsUpdate | undefined
+  let approvalSteps: ApprovalWorkflow["steps"] | null | undefined
 
   for (const { name, args } of toolCalls) {
     switch (name) {
@@ -740,10 +787,70 @@ function applyToolCalls(
         }
         break
       }
+
+      case "update_form_settings": {
+        const parsed = args as z.infer<typeof UpdateFormSettingsParams>
+        settings ??= {}
+        const changed: string[] = []
+        if (parsed.form_type !== null) { settings.form_type = parsed.form_type; changed.push("סוג טופס") }
+        if (parsed.submit_label !== null) { settings.submit_label = parsed.submit_label; changed.push("כפתור שליחה") }
+        if (parsed.submit_message !== null) { settings.submit_message = parsed.submit_message; changed.push("הודעת הצלחה") }
+        if (parsed.after_submit !== null) { settings.after_submit = parsed.after_submit; changed.push("לאחר הגשה") }
+        if (parsed.redirect_url !== null) { settings.redirect_url = parsed.redirect_url; changed.push("כתובת הפניה") }
+        if (parsed.hide_branding !== null) { settings.hide_branding = parsed.hide_branding; changed.push("מיתוג") }
+        if (parsed.submission_limit_field_id !== null) {
+          const exists = result.some((f) => f.id === parsed.submission_limit_field_id)
+          if (exists) { settings.submission_limit_field_id = parsed.submission_limit_field_id; changed.push("מגבלת הגשות") }
+        }
+        if (parsed.submission_limit_count !== null) { settings.submission_limit_count = parsed.submission_limit_count; changed.push("כמות הגשות") }
+        if (parsed.submission_limit_error_message !== null) { settings.submission_limit_error_message = parsed.submission_limit_error_message }
+        if (parsed.submission_start_date !== null) { settings.submission_start_date = parsed.submission_start_date; changed.push("תאריך פתיחה") }
+        if (parsed.submission_end_date !== null) { settings.submission_end_date = parsed.submission_end_date; changed.push("תאריך סגירה") }
+        if (changed.length > 0) summary.push(`הגדרות עודכנו: ${changed.join(", ")}`)
+        break
+      }
+
+      case "set_approval_workflow": {
+        const parsed = args as z.infer<typeof SetApprovalWorkflowParams>
+        if (!parsed.enabled || parsed.steps.length === 0) {
+          approvalSteps = null
+          summary.push("סבב האישורים נוקה")
+          break
+        }
+        const steps: ApprovalWorkflow["steps"] = []
+        for (const s of parsed.steps) {
+          const step: ApprovalWorkflow["steps"][number] = {
+            approver_name: s.approver_name,
+            channel: s.channel,
+            source_type: s.source_type,
+          }
+          if (s.source_type === "fixed" && s.target) step.target = s.target
+          if (s.source_type === "from_field" && s.source_field_key) {
+            // In chat, source_field_key = existing field id
+            const exists = result.some((f) => f.id === s.source_field_key)
+            if (exists) step.source_field_id = s.source_field_key
+          }
+          if (s.source_type === "from_option_map" && s.source_field_key) {
+            const exists = result.some((f) => f.id === s.source_field_key)
+            if (exists) {
+              step.source_field_id = s.source_field_key
+              if (s.target_by_value) {
+                step.target_by_value = Object.fromEntries(
+                  s.target_by_value.map((m) => [m.option, m.target])
+                )
+              }
+            }
+          }
+          steps.push(step)
+        }
+        approvalSteps = steps
+        summary.push(`סבב אישורים: ${steps.length} שלבים`)
+        break
+      }
     }
   }
 
-  return { fields: result, summary }
+  return { fields: result, summary, settings, approvalSteps }
 }
 
 export async function chatWithFormAI(input: {
@@ -755,6 +862,8 @@ export async function chatWithFormAI(input: {
   aiMessage: string
   history: ChatMessage[]
   summary: string[]
+  settings?: ChatSettingsUpdate
+  approvalSteps?: ApprovalWorkflow["steps"] | null
   error?: string
 }> {
   const apiKey = process.env.OPENAI_API_KEY
@@ -817,6 +926,16 @@ export async function chatWithFormAI(input: {
           parameters: ReorderFieldParams,
           description: "Move a field to a different position",
         }),
+        zodFunction({
+          name: "update_form_settings",
+          parameters: UpdateFormSettingsParams,
+          description: "Update form-level settings (form type, submit label, hide branding, submission limits, date window, etc.)",
+        }),
+        zodFunction({
+          name: "set_approval_workflow",
+          parameters: SetApprovalWorkflowParams,
+          description: "Replace the entire approval workflow steps",
+        }),
       ],
     })
 
@@ -855,7 +974,10 @@ export async function chatWithFormAI(input: {
       id: tc.id,
     }))
 
-    const { fields: updatedFields, summary } = applyToolCalls(input.currentFields, parsedCalls)
+    const { fields: updatedFields, summary, settings, approvalSteps } = applyToolCalls(
+      input.currentFields,
+      parsedCalls
+    )
 
     const assistantContent = msg.content ?? (summary.join(", ") || "השינויים בוצעו")
     newHistory.push({ role: "assistant", content: assistantContent })
@@ -865,6 +987,8 @@ export async function chatWithFormAI(input: {
       aiMessage: assistantContent,
       history: newHistory,
       summary,
+      settings,
+      approvalSteps,
     }
   } catch (err) {
     console.error("AI chat error:", err)

@@ -1276,6 +1276,35 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         onClose={() => setAiChatOpen(false)}
         fields={fields}
         onFieldsUpdate={setFields}
+        onSettingsUpdate={(u) => {
+          if (u.form_type !== undefined) setFormType(u.form_type)
+          if (u.submit_label !== undefined) setSubmitLabel(u.submit_label)
+          if (u.after_submit !== undefined) setAfterSubmit(u.after_submit)
+          if (u.redirect_url !== undefined) setRedirectUrl(u.redirect_url)
+          if (u.hide_branding !== undefined) setHideBranding(u.hide_branding)
+          if (u.submission_limit_field_id !== undefined) setSubmissionLimitFieldId(u.submission_limit_field_id)
+          if (u.submission_limit_count !== undefined) setSubmissionLimitCount(u.submission_limit_count)
+          if (u.submission_limit_error_message !== undefined) setSubmissionLimitErrorMessage(u.submission_limit_error_message)
+          if (u.submission_start_date !== undefined) setSubmissionStartDate(u.submission_start_date)
+          if (u.submission_end_date !== undefined) setSubmissionEndDate(u.submission_end_date)
+        }}
+        onApprovalStepsUpdate={(steps) => {
+          if (!steps || steps.length === 0) {
+            setApprovalSteps([DEFAULT_STEP()])
+            return
+          }
+          setApprovalSteps(
+            steps.map((s) => ({
+              _id: nanoid(),
+              approver_name: s.approver_name,
+              channel: s.channel,
+              source_type: s.source_type,
+              target: s.target ?? "",
+              source_field_id: s.source_field_id ?? "",
+              target_by_value: s.target_by_value ?? {},
+            }))
+          )
+        }}
       />
 
       {isEditing && initialForm && (
