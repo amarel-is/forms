@@ -16,7 +16,8 @@
       "mcp__plugin_vercel_vercel__get_runtime_logs",
       "Bash(npm install *)",
       "Bash(vercel env *)",
-      "Bash(vercel link *)"
+      "Bash(vercel link *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
