@@ -9,7 +9,10 @@
       "Bash(xargs grep:*)",
       "Bash(npx shadcn@latest add alert-dialog --yes)",
       "Bash(node -e \"const r = require\\('c:/Users/Dolev.H/OneDrive - Amarel LTD/Documents/GitHub/forms/node_modules/radix-ui'\\); console.log\\(Object.keys\\(r\\).filter\\(k => k.includes\\('Alert'\\)\\)\\)\")",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "mcp__plugin_vercel_vercel__list_teams",
+      "mcp__plugin_vercel_vercel__list_projects",
+      "mcp__plugin_vercel_vercel__get_project"
     ]
   }
 }
