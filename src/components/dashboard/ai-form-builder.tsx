@@ -61,15 +61,15 @@ export function AiFormBuilder() {
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder={"לדוגמה: טופס דיווח נוכחות עם שם, תעודת זהות, חטיבה (רשימה נפתחת), וכפתור כניסה/יציאה.\nאו: טופס משוב עם דירוג כוכבים, שדה טקסט חופשי, ושדה מייל."}
-            className="min-h-[100px] rounded-xl text-sm resize-none"
+            placeholder={"לדוגמה:\n• טופס נוכחות עם שם, ת.ז. וכפתור כניסה/יציאה\n• טופס הזמנת ציוד מחולק לאזורים (פרטי מבקש / פריטים / אישור) עם רשימה נפתחת מבוססת מחלקות, שדה כמות מספרי (1-100), וסבב אישורים לכספים ולמנהל\n• טופס משוב עם דירוג כוכבים ושדה טקסט שמופיע רק אם הדירוג נמוך מ-3"}
+            className="min-h-[140px] rounded-xl text-sm resize-none"
             dir="rtl"
             disabled={isPending}
           />
 
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] text-neutral-400 flex-1">
-              הטופס ייווצר בעברית עם שדות, ולידציות ולוגיקה מותנית. תוכל לערוך אותו אח&quot;כ.
+              תומך באזורים מופרדים, לוגיקה מותנית, ולידציות, טבלאות נתונים, חיפוש תלוי שדה, סבב אישורים, מגבלות הגשה, ושדות חישוב AI.
             </p>
             <Button
               onClick={handleGenerate}
