@@ -17,7 +17,9 @@
       "Bash(npm install *)",
       "Bash(vercel env *)",
       "Bash(vercel link *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(npm run *)"
     ]
   }
 }
