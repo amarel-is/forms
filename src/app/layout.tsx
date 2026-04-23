@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Google_Sans } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
+import { ImpersonationBanner } from "@/components/impersonation-banner"
 import "./globals.css"
 
 const googleSans = Google_Sans({
@@ -60,6 +61,7 @@ export default function RootLayout({
         >
           דלג לתוכן הראשי
         </a>
+        <ImpersonationBanner />
         {children}
         <Toaster />
       </body>

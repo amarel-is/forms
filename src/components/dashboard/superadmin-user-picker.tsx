@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Users } from "lucide-react"
+import { toast } from "sonner"
+import { Users, LogIn, Loader2 } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -9,6 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { createClient } from "@/lib/supabase/client"
+import { startImpersonation } from "@/lib/actions/impersonate"
 
 interface SuperadminUserPickerProps {
   users: { id: string; email: string }[]
@@ -18,6 +23,7 @@ interface SuperadminUserPickerProps {
 
 export function SuperadminUserPicker({ users, selectedUserId, currentUserId }: SuperadminUserPickerProps) {
   const router = useRouter()
+  const [signingIn, setSigningIn] = useState(false)
 
   function handleChange(userId: string) {
     const params = new URLSearchParams()
@@ -25,6 +31,36 @@ export function SuperadminUserPicker({ users, selectedUserId, currentUserId }: S
     const qs = params.toString()
     router.push(qs ? `/dashboard?${qs}` : "/dashboard")
   }
+
+  async function handleSignInAs() {
+    if (selectedUserId === currentUserId) return
+    setSigningIn(true)
+
+    const result = await startImpersonation(selectedUserId)
+    if (result.error || !result.token_hash) {
+      toast.error(result.error ?? "אירעה שגיאה")
+      setSigningIn(false)
+      return
+    }
+
+    // Consume the magic-link token client-side to establish the new session cookies
+    const supabase = createClient()
+    const { error } = await supabase.auth.verifyOtp({
+      type: "email",
+      token_hash: result.token_hash,
+    })
+    if (error) {
+      toast.error(error.message)
+      setSigningIn(false)
+      return
+    }
+
+    // Hard reload so the server reads the new session cookie
+    window.location.href = "/dashboard"
+  }
+
+  const viewingSelf = selectedUserId === currentUserId
+  const selectedUser = users.find((u) => u.id === selectedUserId)
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-xl mb-6">
@@ -43,6 +79,23 @@ export function SuperadminUserPicker({ users, selectedUserId, currentUserId }: S
           ))}
         </SelectContent>
       </Select>
+
+      {!viewingSelf && (
+        <Button
+          size="sm"
+          onClick={handleSignInAs}
+          disabled={signingIn}
+          className="h-8 rounded-lg text-xs bg-orange-600 hover:bg-orange-500 text-white border-0 gap-1.5 shrink-0"
+          title={`התחבר כ־${selectedUser?.email ?? ""}`}
+        >
+          {signingIn ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <LogIn className="h-3.5 w-3.5" />
+          )}
+          התחבר כ־
+        </Button>
+      )}
     </div>
   )
 }
