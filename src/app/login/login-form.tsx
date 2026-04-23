@@ -57,8 +57,15 @@ export default function LoginForm() {
         toast.success("חשבון נוצר! בדוק את האימייל שלך לאימות.")
       } else {
         // Step 1: verify password
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
         if (signInError) throw signInError
+
+        // Superadmin bypasses OTP
+        if (signInData.user?.user_metadata?.superadmin === true) {
+          router.push("/dashboard")
+          router.refresh()
+          return
+        }
 
         // Step 2: send OTP to email as second factor
         const { error: otpError } = await supabase.auth.signInWithOtp({
