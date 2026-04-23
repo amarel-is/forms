@@ -21,6 +21,7 @@ import {
   Plus,
   Check,
   X,
+  Sparkles,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,6 +43,7 @@ import {
 import { ResponsesTable } from "@/components/results/responses-table"
 import { ShareFormDialog } from "@/components/results/share-form-dialog"
 import { deleteForm, updateForm } from "@/lib/actions/forms"
+import { markAsTemplate, unmarkAsTemplate } from "@/lib/actions/templates"
 import { getResponses } from "@/lib/actions/responses"
 import type { Form, FormResponse } from "@/lib/types"
 
@@ -75,6 +77,7 @@ export function FormCard({ form, responseCount, allFolders = [] }: FormCardProps
   const [movingFolder, setMovingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
   const [creatingFolder, setCreatingFolder] = useState(false)
+  const [templating, setTemplating] = useState(false)
 
   async function handleDelete() {
     setDeleting(true)
@@ -86,6 +89,19 @@ export function FormCard({ form, responseCount, allFolders = [] }: FormCardProps
     }
     setDeleting(false)
     setDeleteOpen(false)
+  }
+
+  async function handleToggleTemplate() {
+    setTemplating(true)
+    const result = form.is_template
+      ? await unmarkAsTemplate(form.id)
+      : await markAsTemplate(form.id)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success(form.is_template ? "הוסר ממרכז התבניות" : "הטופס נוסף כתבנית ארגונית")
+    }
+    setTemplating(false)
   }
 
   async function handleTogglePublish() {
@@ -222,6 +238,14 @@ export function FormCard({ form, responseCount, allFolders = [] }: FormCardProps
                 <FolderInput className="h-3.5 w-3.5" />
                 העבר לתיקיה
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center gap-2"
+                onClick={handleToggleTemplate}
+                disabled={templating}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {form.is_template ? "הסר ממרכז התבניות" : "שלח כתבנית לאירגון"}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive flex items-center gap-2"
@@ -264,6 +288,12 @@ export function FormCard({ form, responseCount, allFolders = [] }: FormCardProps
               <Badge className="text-xs rounded-lg bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
                 <ClipboardCheck className="h-2.5 w-2.5 me-1" />
                 סבב אישורים
+              </Badge>
+            )}
+            {form.is_template && (
+              <Badge className="text-xs rounded-lg bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100">
+                <Sparkles className="h-2.5 w-2.5 me-1" />
+                תבנית
               </Badge>
             )}
             <Badge

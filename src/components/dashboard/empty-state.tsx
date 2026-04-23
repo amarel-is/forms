@@ -1,8 +1,12 @@
-import Link from "next/link"
-import { Plus } from "lucide-react"
+import { NewFormDialog } from "./new-form-dialog"
 import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
 
-export function EmptyState() {
+interface EmptyStateProps {
+  isSuperadmin: boolean
+}
+
+export function EmptyState({ isSuperadmin }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-5">
@@ -24,12 +28,15 @@ export function EmptyState() {
       <p className="text-sm text-neutral-500 max-w-xs mb-6">
         צור את הטופס הראשון שלך כדי להתחיל לאסוף תגובות.
       </p>
-      <Button asChild className="rounded-xl gap-2 h-10">
-        <Link href="/forms/new">
-          <Plus className="h-4 w-4" />
-          צור טופס
-        </Link>
-      </Button>
+      <NewFormDialog
+        isSuperadmin={isSuperadmin}
+        trigger={
+          <Button className="rounded-xl gap-2 h-10 bg-orange-600 hover:bg-orange-500 text-white border-0">
+            <Plus className="h-4 w-4" />
+            צור טופס
+          </Button>
+        }
+      />
     </div>
   )
 }

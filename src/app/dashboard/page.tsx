@@ -1,11 +1,9 @@
 import { Metadata } from "next"
-import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { DashboardContent } from "@/components/dashboard/dashboard-content"
 import { SuperadminUserPicker } from "@/components/dashboard/superadmin-user-picker"
+import { NewFormDialog } from "@/components/dashboard/new-form-dialog"
 import { AppHeader } from "@/components/layout/amarel-nav"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -102,20 +100,12 @@ export default async function DashboardPage({
           </div>
 
           {formsWithCounts.length > 0 && !viewingEmail && (
-            <Button
-              asChild
-              className="rounded-xl gap-2 h-9 bg-orange-600 hover:bg-orange-500 text-white border-0 shadow-sm"
-            >
-              <Link href="/forms/new">
-                <Plus className="h-4 w-4" />
-                טופס חדש
-              </Link>
-            </Button>
+            <NewFormDialog isSuperadmin={isSuperadmin} />
           )}
         </div>
 
         {formsWithCounts.length === 0 ? (
-          <EmptyState />
+          <EmptyState isSuperadmin={isSuperadmin} />
         ) : (
           <DashboardContent formsWithCounts={formsWithCounts} />
         )}

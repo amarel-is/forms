@@ -196,6 +196,8 @@ export interface Form {
   form_type: FormType
   is_published: boolean
   folder: string | null
+  is_template: boolean
+  template_category: string | null
   created_at: string
   updated_at: string
 }
@@ -358,6 +360,8 @@ export function rowToForm(row: any): Form {
     form_type: (row.form_type ?? "general") as FormType,
     is_published: row.is_published ?? false,
     folder: row.folder ?? null,
+    is_template: row.is_template ?? false,
+    template_category: row.template_category ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }
