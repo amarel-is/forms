@@ -22,7 +22,9 @@
       "Bash(npm run *)",
       "Bash(mkdir -p \"C:\\\\Users\\\\Dolev.H\\\\OneDrive - Amarel LTD\\\\Documents\\\\GitHub\\\\forms\\\\src\\\\app\\\\api\\\\forms\\\\[formId]\\\\submissions\\\\[id]\")",
       "Bash(git commit --amend -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
