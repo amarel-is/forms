@@ -632,6 +632,7 @@ function FieldRenderer({
   if (field.type === "link")       return <LinkElement field={field} />
   if (field.type === "section")    return <SectionElement field={field} />
   if (field.type === "ai_computed") return <AiComputedElement field={field} allValues={allValues} allFields={allFields} />
+  if (field.type === "dataset_lookup") return <DatasetLookupElement field={field} datasets={datasets} allValues={allValues} />
 
   // Input fields
   if (field.type === "text") {
