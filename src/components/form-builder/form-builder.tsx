@@ -47,6 +47,7 @@ import {
   Sparkles as SparklesIcon,
   Undo2,
   Redo2,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -93,6 +94,7 @@ import { DatasetEditor } from "./dataset-editor"
 import { AiChatPanel } from "./ai-chat-panel"
 import { EmbedDialog } from "./embed-dialog"
 import { WebhooksPanel } from "./webhooks-panel"
+import { ApiKeySection } from "./api-key-section"
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes"
 import { useHistory } from "@/hooks/use-history"
 
@@ -167,6 +169,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const [submissionEndDate, setSubmissionEndDate] = useState(
     initialForm?.settings?.submission_end_date ?? ""
   )
+  const [redirectParams, setRedirectParams] = useState<Array<{ field_id: string; param_name: string }>>(
+    initialForm?.settings?.redirect_params ?? []
+  )
   const [aiChatOpen, setAiChatOpen] = useState(false)
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false)
 
@@ -189,6 +194,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       submissionLimitErrorMessage: initialForm?.settings?.submission_limit_error_message ?? "",
       submissionStartDate: initialForm?.settings?.submission_start_date ?? "",
       submissionEndDate: initialForm?.settings?.submission_end_date ?? "",
+      redirectParams: initialForm?.settings?.redirect_params ?? [],
     })
   )
 
@@ -197,10 +203,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       name, description, fields, formType, submitLabel,
       afterSubmit, redirectUrl, titleAlign, hideBranding,
       submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
-      submissionStartDate, submissionEndDate,
+      submissionStartDate, submissionEndDate, redirectParams,
     })
     return current !== savedSnapshotRef.current
-  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate])
+  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams])
 
   useUnsavedChanges(isDirty)
 
@@ -393,6 +399,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
             submit_label: submitLabel.trim() || undefined,
             after_submit: afterSubmit,
             redirect_url: afterSubmit === "redirect" ? redirectUrl.trim() || undefined : undefined,
+            ...(afterSubmit === "redirect" && redirectParams.length > 0 ? { redirect_params: redirectParams } : {}),
             title_align: titleAlign,
             hide_branding: hideBranding || undefined,
             ...(submissionLimitFieldId ? {
@@ -445,7 +452,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           name, description, fields, formType, submitLabel,
           afterSubmit, redirectUrl, titleAlign, hideBranding,
           submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
-          submissionStartDate, submissionEndDate,
+          submissionStartDate, submissionEndDate, redirectParams,
         })
 
         if (publish !== undefined) {
@@ -462,7 +469,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         setPublishing(false)
       }
     },
-    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
+    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
   )
 
   return (
@@ -899,13 +906,70 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                       </button>
                     </div>
                     {afterSubmit === "redirect" && (
-                      <Input
-                        value={redirectUrl}
-                        onChange={(e) => setRedirectUrl(e.target.value)}
-                        placeholder="https://example.com/thank-you"
-                        className="h-9 rounded-xl text-xs mt-1"
-                        dir="ltr"
-                      />
+                      <div className="space-y-3 mt-1">
+                        <Input
+                          value={redirectUrl}
+                          onChange={(e) => setRedirectUrl(e.target.value)}
+                          placeholder="https://example.com/thank-you"
+                          className="h-9 rounded-xl text-xs"
+                          dir="ltr"
+                        />
+
+                        {/* Redirect query params */}
+                        <div className="space-y-2">
+                          <Label className="text-[11px] text-neutral-500">שרשר שדות כפרמטרים ב-URL</Label>
+                          <p className="text-[10px] text-neutral-400">submission_id משורשר אוטומטית.</p>
+                          {redirectParams.map((p, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5">
+                              <Select
+                                value={p.field_id}
+                                onValueChange={(v) => {
+                                  const updated = [...redirectParams]
+                                  const selectedField = fields.find((f) => f.id === v)
+                                  updated[idx] = { field_id: v, param_name: updated[idx].param_name || selectedField?.label || v }
+                                  setRedirectParams(updated)
+                                }}
+                                dir="rtl"
+                              >
+                                <SelectTrigger className="h-8 rounded-lg text-xs flex-1 min-w-0">
+                                  <SelectValue placeholder="בחר שדה" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {fields.filter((f) => !isLayoutField(f.type)).map((f) => (
+                                    <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                value={p.param_name}
+                                onChange={(e) => {
+                                  const updated = [...redirectParams]
+                                  updated[idx] = { ...updated[idx], param_name: e.target.value }
+                                  setRedirectParams(updated)
+                                }}
+                                placeholder="שם פרמטר"
+                                className="h-8 rounded-lg text-xs w-28"
+                                dir="ltr"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setRedirectParams(redirectParams.filter((_, i) => i !== idx))}
+                                className="text-neutral-400 hover:text-red-500 shrink-0"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setRedirectParams([...redirectParams, { field_id: "", param_name: "" }])}
+                            className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium"
+                          >
+                            <Plus className="h-3 w-3" />
+                            הוסף פרמטר
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -1116,6 +1180,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                         </Label>
                         <WebhooksPanel formId={initialForm.id} />
                       </div>
+
+                      <Separator />
+                      <ApiKeySection formId={initialForm.id} />
                     </>
                   )}
 
@@ -1281,6 +1348,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           if (u.submit_label !== undefined) setSubmitLabel(u.submit_label)
           if (u.after_submit !== undefined) setAfterSubmit(u.after_submit)
           if (u.redirect_url !== undefined) setRedirectUrl(u.redirect_url)
+          if (u.redirect_params !== undefined) setRedirectParams(u.redirect_params)
           if (u.hide_branding !== undefined) setHideBranding(u.hide_branding)
           if (u.submission_limit_field_id !== undefined) setSubmissionLimitFieldId(u.submission_limit_field_id)
           if (u.submission_limit_count !== undefined) setSubmissionLimitCount(u.submission_limit_count)

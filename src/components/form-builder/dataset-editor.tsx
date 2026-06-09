@@ -10,6 +10,9 @@ import {
   Check,
   X,
   Database,
+  ImageIcon,
+  Upload,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,7 +24,61 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { uploadFormImage } from "@/lib/actions/storage"
 import type { FormDataset, DatasetColumn, DatasetRow } from "@/lib/types"
+
+function ImageCell({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (url: string) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const fd = new FormData()
+    fd.append("file", file)
+    const result = await uploadFormImage(fd)
+    if (result.url) {
+      onChange(result.url)
+    }
+    setUploading(false)
+    e.target.value = ""
+  }
+
+  if (value) {
+    return (
+      <div className="flex items-center gap-1.5 h-8">
+        <img src={value} alt="" className="h-8 w-8 rounded object-cover border border-neutral-200 shrink-0" />
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="text-neutral-400 hover:text-red-500 transition-colors shrink-0"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <label className="flex items-center gap-1 h-8 px-2 cursor-pointer text-neutral-400 hover:text-neutral-600 transition-colors">
+      {uploading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <>
+          <Upload className="h-3.5 w-3.5" />
+          <span className="text-[11px]">העלה</span>
+        </>
+      )}
+      <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={uploading} />
+    </label>
+  )
+}
 
 interface DatasetEditorProps {
   dataset: FormDataset
@@ -232,6 +289,7 @@ export function DatasetEditor({
                                 <SelectContent>
                                   <SelectItem value="text">טקסט</SelectItem>
                                   <SelectItem value="number">מספר</SelectItem>
+                                  <SelectItem value="image">תמונה</SelectItem>
                                 </SelectContent>
                               </Select>
                               <button type="button" onClick={commitColumn} className="text-green-600 hover:text-green-700">
@@ -245,7 +303,7 @@ export function DatasetEditor({
                             <div className="flex items-center gap-1.5 group">
                               <span className="text-xs font-semibold text-neutral-700">{col.name}</span>
                               <span className="text-[10px] text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded">
-                                {col.type === "number" ? "מספר" : "טקסט"}
+                                {col.type === "number" ? "מספר" : col.type === "image" ? "תמונה" : "טקסט"}
                               </span>
                               <button
                                 type="button"
@@ -291,12 +349,19 @@ export function DatasetEditor({
                           </td>
                           {dataset.columns.map((col) => (
                             <td key={col.id} className="px-1.5 py-1.5">
-                              <Input
-                                type={col.type === "number" ? "number" : "text"}
-                                value={String(row[col.id] ?? "")}
-                                onChange={(e) => updateCell(row.id, col.id, e.target.value)}
-                                className="h-8 rounded-lg text-xs border-transparent bg-transparent hover:bg-white hover:border-neutral-200 focus:bg-white focus:border-neutral-300 transition-all"
-                              />
+                              {col.type === "image" ? (
+                                <ImageCell
+                                  value={String(row[col.id] ?? "")}
+                                  onChange={(url) => updateCell(row.id, col.id, url)}
+                                />
+                              ) : (
+                                <Input
+                                  type={col.type === "number" ? "number" : "text"}
+                                  value={String(row[col.id] ?? "")}
+                                  onChange={(e) => updateCell(row.id, col.id, e.target.value)}
+                                  className="h-8 rounded-lg text-xs border-transparent bg-transparent hover:bg-white hover:border-neutral-200 focus:bg-white focus:border-neutral-300 transition-all"
+                                />
+                              )}
                             </td>
                           ))}
                           <td className="px-2 py-1.5">
@@ -334,9 +399,9 @@ export function DatasetEditor({
           <div className="bg-blue-50 rounded-xl border border-blue-200 p-4">
             <Label className="text-xs font-medium text-blue-700">איך להשתמש?</Label>
             <p className="text-xs text-blue-600 mt-1">
-              הגדר עמודות (שם, מחיר, מק&quot;ט...) והוסף שורות עם הנתונים. 
-              בחזרה לעורך הטופס, תוכל לקשר שדה dropdown / radio / multiselect למאגר הזה — 
-              האפשרויות ייטענו אוטומטית מהנתונים.
+              הגדר עמודות (שם, מחיר, מק&quot;ט, תמונה...) והוסף שורות עם הנתונים.
+              בחזרה לעורך הטופס, תוכל לקשר שדה dropdown / radio / multiselect למאגר הזה —
+              האפשרויות ייטענו אוטומטית מהנתונים. עמודות מסוג תמונה מאפשרות העלאת תמונה לכל שורה.
             </p>
           </div>
         </div>

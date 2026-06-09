@@ -158,6 +158,7 @@ export interface FormSettings {
   submission_limit_error_message?: string // custom error shown when limit is exceeded
   submission_start_date?: string      // YYYY-MM-DD — form not open before this date (Israel timezone)
   submission_end_date?: string        // YYYY-MM-DD — form closed after this date (Israel timezone)
+  redirect_params?: Array<{ field_id: string; param_name: string }>
 }
 
 // ─── Per-form datasets ("mini databases") ────────────────────────────────────
@@ -165,7 +166,7 @@ export interface FormSettings {
 export interface DatasetColumn {
   id: string
   name: string
-  type: "text" | "number"
+  type: "text" | "number" | "image"
 }
 
 export interface DatasetRow {

@@ -365,7 +365,23 @@ export function FormRenderer({ form }: FormRendererProps) {
           toast.warning(result.warning)
         }
         if (afterSubmit === "redirect" && redirectUrl) {
-          window.location.href = redirectUrl
+          try {
+            const url = new URL(redirectUrl)
+            if (result.response_id) {
+              url.searchParams.set("submission_id", result.response_id)
+            }
+            const params = form.settings?.redirect_params
+            if (params?.length) {
+              for (const p of params) {
+                const val = submittableValues[p.field_id]
+                const str = Array.isArray(val) ? val.join(",") : String(val ?? "")
+                if (str) url.searchParams.set(p.param_name, str)
+              }
+            }
+            window.location.href = url.toString()
+          } catch {
+            window.location.href = redirectUrl
+          }
         } else {
           setSubmitted(true)
           window.scrollTo({ top: 0, behavior: "smooth" })
@@ -568,6 +584,7 @@ function DatasetLookupElement({
   if (!displayValue) return null
 
   const displayCol = ds.columns.find((c) => c.id === columnId)
+  const isImage = displayCol?.type === "image"
 
   return (
     <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3">
@@ -575,9 +592,13 @@ function DatasetLookupElement({
         <span className="text-sm font-medium text-cyan-800">
           {field.label || displayCol?.name || "תצוגת מאגר"}
         </span>
-        <span className="text-sm font-bold text-cyan-900">
-          {displayValue}
-        </span>
+        {isImage ? (
+          <img src={displayValue} alt={field.label || ""} className="h-16 w-16 rounded-lg object-cover border border-cyan-200" />
+        ) : (
+          <span className="text-sm font-bold text-cyan-900">
+            {displayValue}
+          </span>
+        )}
       </div>
     </div>
   )

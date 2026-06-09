@@ -19,7 +19,8 @@
       "Bash(vercel link *)",
       "Bash(npx tsc *)",
       "Bash(npx next *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Dolev.H\\\\OneDrive - Amarel LTD\\\\Documents\\\\GitHub\\\\forms\\\\src\\\\app\\\\api\\\\forms\\\\[formId]\\\\submissions\\\\[id]\")"
     ]
   }
 }

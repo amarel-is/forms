@@ -9,7 +9,7 @@ import { rowToResponse, type FormResponse } from "@/lib/types"
 export async function submitResponse(
   formId: string,
   data: Record<string, string | string[]>
-): Promise<{ success?: boolean; error?: string; warning?: string }> {
+): Promise<{ success?: boolean; error?: string; warning?: string; response_id?: string }> {
   const supabase = await createClient()
   let responseId: string | null = null
 
@@ -59,7 +59,7 @@ export async function submitResponse(
     }
   }
 
-  return { success: true }
+  return { success: true, ...(responseId ? { response_id: responseId } : {}) }
 }
 
 export async function deleteResponse(

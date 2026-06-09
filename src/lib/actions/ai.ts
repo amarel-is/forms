@@ -123,7 +123,7 @@ type AIField = z.infer<typeof AIFieldSchema>
 const AIDatasetColumnSchema = z.object({
   key: z.string(),
   name: z.string(),
-  type: z.enum(["text", "number"]),
+  type: z.enum(["text", "number", "image"]),
 })
 
 const AIDatasetRowSchema = z.object({
@@ -168,6 +168,7 @@ const FormGenerationSchema = z.object({
   submit_message: z.string().nullable(),
   after_submit: z.enum(["thank_you", "redirect"]).nullable(),
   redirect_url: z.string().nullable(),
+  redirect_params: z.array(z.object({ field_key: z.string(), param_name: z.string() })).nullable(),
   hide_branding: z.boolean().nullable(),
   submission_limit_field_key: z.string().nullable(),
   submission_limit_count: z.number().nullable(),
@@ -235,7 +236,7 @@ DEFAULT VALUES
 DATASETS (mini-databases)
 If the form benefits from a shared lookup table (employees, departments, products, cities), include it in datasets:
 - Give each dataset a key and Hebrew display name.
-- Columns: each with key, name (Hebrew), type (text | number).
+- Columns: each with key, name (Hebrew), type (text | number | image). Image columns store a URL to an uploaded image.
 - Rows: array of { cells: [{ column_key, value }] } — all cell values are strings, coerce later.
 - Keep each dataset under ~40 rows; for longer lists, create a smaller representative sample and suggest CSV import in the form description.
 Bind an input field to a dataset by setting data_source_dataset_key + data_source_label_column_key + data_source_value_column_key on a dropdown / multiselect / radio. Users pick by label, the stored value is from the value column.
@@ -262,6 +263,7 @@ SUBMISSION CONTROLS
 - submission_start_date / submission_end_date: YYYY-MM-DD bounds (Israel timezone).
 - hide_branding: true to hide the Amarel powered-by footer.
 - after_submit="redirect" + redirect_url: external redirect after submit, otherwise "thank_you".
+- redirect_params: array of { field_key, param_name } — append submitted field values as query params to the redirect URL.
 
 DESIGN GUIDELINES
 - Long forms → break with section + subheading + paragraph (info) for instructions.
@@ -495,6 +497,11 @@ export async function generateFormWithAI(
     if (parsed.submit_message) settings.submit_message = parsed.submit_message
     if (parsed.after_submit === "redirect" && parsed.redirect_url) {
       settings.redirect_url = parsed.redirect_url
+      if (parsed.redirect_params?.length) {
+        settings.redirect_params = parsed.redirect_params
+          .map((p) => ({ field_id: maps.fieldKeyToId.get(p.field_key) ?? "", param_name: p.param_name }))
+          .filter((p) => p.field_id)
+      }
     }
     if (parsed.hide_branding) settings.hide_branding = true
 
@@ -628,6 +635,7 @@ const UpdateFormSettingsParams = z.object({
   submit_message: z.string().nullable(),
   after_submit: z.enum(["thank_you", "redirect"]).nullable(),
   redirect_url: z.string().nullable(),
+  redirect_params: z.array(z.object({ field_id: z.string(), param_name: z.string() })).nullable(),
   hide_branding: z.boolean().nullable(),
   submission_limit_field_id: z
     .string()
@@ -682,6 +690,7 @@ export interface ChatSettingsUpdate {
   submit_message?: string
   after_submit?: "thank_you" | "redirect"
   redirect_url?: string
+  redirect_params?: Array<{ field_id: string; param_name: string }>
   hide_branding?: boolean
   submission_limit_field_id?: string
   submission_limit_count?: number
@@ -797,6 +806,7 @@ function applyToolCalls(
         if (parsed.submit_message !== null) { settings.submit_message = parsed.submit_message; changed.push("הודעת הצלחה") }
         if (parsed.after_submit !== null) { settings.after_submit = parsed.after_submit; changed.push("לאחר הגשה") }
         if (parsed.redirect_url !== null) { settings.redirect_url = parsed.redirect_url; changed.push("כתובת הפניה") }
+        if (parsed.redirect_params !== null) { settings.redirect_params = parsed.redirect_params ?? undefined; changed.push("פרמטרי הפניה") }
         if (parsed.hide_branding !== null) { settings.hide_branding = parsed.hide_branding; changed.push("מיתוג") }
         if (parsed.submission_limit_field_id !== null) {
           const exists = result.some((f) => f.id === parsed.submission_limit_field_id)
