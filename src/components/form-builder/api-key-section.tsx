@@ -104,6 +104,11 @@ export function ApiKeySection({ formId }: { formId: string }) {
             שלח את המפתח ב-header בשם <code className="bg-neutral-100 px-1 rounded" dir="ltr">x-api-key</code>.
             ה-<code className="bg-neutral-100 px-1 rounded" dir="ltr">submission_id</code> משורשר אוטומטית ל-redirect URL.
           </p>
+          <p className="text-[10px] text-neutral-400 leading-relaxed">
+            לעדכון הגשה (<code className="bg-neutral-100 px-1 rounded" dir="ltr">PATCH</code>) — שלח את השדות ב-JSON,
+            למשל <code className="bg-neutral-100 px-1 rounded" dir="ltr">{`{"barcode":"5889"}`}</code>.
+            שדות חדשים שאינם בטופס יופיעו כעמודות נוספות בתוצאות.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

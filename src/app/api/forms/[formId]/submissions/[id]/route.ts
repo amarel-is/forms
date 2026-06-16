@@ -73,8 +73,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Submission not found" }, { status: 404 })
   }
 
+  // Accept both shapes:
+  //   { "data": { ...fields } }   — explicit wrapper
+  //   { ...fields }               — fields at the top level (most consumers send this)
+  const patch =
+    body.data && typeof body.data === "object" && !Array.isArray(body.data)
+      ? (body.data as Record<string, unknown>)
+      : (body as Record<string, unknown>)
+
   const currentData = (existing.data ?? {}) as Record<string, unknown>
-  const mergedData = { ...currentData, ...body.data }
+  const mergedData = { ...currentData, ...patch }
 
   const { data, error } = await supabase
     .from("responses")
