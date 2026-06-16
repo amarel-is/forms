@@ -35,6 +35,8 @@ interface ResponsesTableProps {
   /** When false, cells are wider and text wraps instead of truncating (e.g. in dialog) */
   compact?: boolean
   formId?: string
+  /** Custom data keys added via the external submissions API that have no matching form field. */
+  extraKeys?: string[]
 }
 
 const APPROVAL_LABEL: Record<ApprovalStatus, string> = {
@@ -60,7 +62,7 @@ function getResponseText(response: FormResponse): string {
     .toLowerCase()
 }
 
-export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, showApprovalColumns = false, compact = true, formId }: ResponsesTableProps) {
+export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, showApprovalColumns = false, compact = true, formId, extraKeys = [] }: ResponsesTableProps) {
   const router = useRouter()
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -79,21 +81,24 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
     })
   }
 
-  function formatValue(val: string | string[] | undefined): React.ReactNode {
-    if (!val) return <span className="text-neutral-300">—</span>
+  function formatValue(val: unknown): React.ReactNode {
+    if (val === null || val === undefined || val === "") {
+      return <span className="text-neutral-300">—</span>
+    }
     if (Array.isArray(val)) {
       if (val.length === 0) return <span className="text-neutral-300">—</span>
       return (
         <div className="flex flex-wrap gap-1">
-          {val.map((v) => (
-            <Badge key={v} variant="secondary" className="text-xs rounded-md">
-              {v}
+          {val.map((v, i) => (
+            <Badge key={`${String(v)}-${i}`} variant="secondary" className="text-xs rounded-md">
+              {String(v)}
             </Badge>
           ))}
         </div>
       )
     }
-    return <span className="text-sm text-neutral-700">{val}</span>
+    const text = typeof val === "object" ? JSON.stringify(val) : String(val)
+    return <span className="text-sm text-neutral-700">{text}</span>
   }
 
   if (responses.length === 0) {
@@ -149,6 +154,21 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
                   {f.label || "ללא שם"}
                 </TableHead>
               ))}
+              {extraKeys.map((key) => (
+                <TableHead
+                  key={`extra-${key}`}
+                  className={`text-xs font-semibold text-neutral-500 text-right ${
+                    compact ? "min-w-[140px]" : "min-w-[160px]"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    {key}
+                    <Badge variant="secondary" className="text-[10px] rounded px-1 py-0 font-normal text-neutral-400">
+                      API
+                    </Badge>
+                  </span>
+                </TableHead>
+              ))}
               {formId && <TableHead className="w-10" />}
             </TableRow>
           </TableHeader>
@@ -156,7 +176,7 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={1 + fields.length + (showApprovalColumns ? 2 : 0) + (formId ? 1 : 0)}
+                  colSpan={1 + fields.length + extraKeys.length + (showApprovalColumns ? 2 : 0) + (formId ? 1 : 0)}
                   className="text-center py-10 text-neutral-400 text-sm"
                 >
                   לא נמצאו תגובות
@@ -196,6 +216,14 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
                       className={`text-right ${compact ? "max-w-[200px] truncate" : "min-w-[160px] max-w-[320px] break-words whitespace-normal"}`}
                     >
                       {formatValue(response.data[f.id])}
+                    </TableCell>
+                  ))}
+                  {extraKeys.map((key) => (
+                    <TableCell
+                      key={`extra-${key}`}
+                      className={`text-right ${compact ? "max-w-[200px] truncate" : "min-w-[160px] max-w-[320px] break-words whitespace-normal"}`}
+                    >
+                      {formatValue(response.data[key])}
                     </TableCell>
                   ))}
                   {formId && (

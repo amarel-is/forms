@@ -18,6 +18,15 @@ interface ExportButtonProps {
   formName: string
   approvalsByResponseId?: Record<string, ResponseApproval>
   showApprovalColumns?: boolean
+  /** Custom data keys added via the external submissions API that have no matching form field. */
+  extraKeys?: string[]
+}
+
+function stringifyValue(val: unknown): string {
+  if (val === null || val === undefined) return ""
+  if (Array.isArray(val)) return val.map((v) => String(v)).join(", ")
+  if (typeof val === "object") return JSON.stringify(val)
+  return String(val)
 }
 
 function escapeCSV(value: string): string {
@@ -33,6 +42,7 @@ export function ExportButton({
   formName,
   approvalsByResponseId = {},
   showApprovalColumns = false,
+  extraKeys = [],
 }: ExportButtonProps) {
   function handleExport() {
     const headers = ["זמן שליחה"]
@@ -40,6 +50,7 @@ export function ExportButton({
       headers.push("סטטוס אישור", "שלב")
     }
     fields.forEach((f) => headers.push(f.label || "ללא שם"))
+    extraKeys.forEach((key) => headers.push(key))
 
     const rows = responses.map((response) => {
       const row: string[] = []
@@ -65,14 +76,11 @@ export function ExportButton({
       }
 
       fields.forEach((f) => {
-        const val = response.data[f.id]
-        if (!val) {
-          row.push("")
-        } else if (Array.isArray(val)) {
-          row.push(val.join(", "))
-        } else {
-          row.push(val)
-        }
+        row.push(stringifyValue(response.data[f.id]))
+      })
+
+      extraKeys.forEach((key) => {
+        row.push(stringifyValue(response.data[key]))
       })
 
       return row

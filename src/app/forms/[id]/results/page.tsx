@@ -15,7 +15,7 @@ import { AppHeader } from "@/components/layout/amarel-nav"
 import { createClient } from "@/lib/supabase/server"
 import { getAuthContext } from "@/lib/supabase/auth-context"
 import { getResponseApprovalsByForm } from "@/lib/actions/approvals"
-import { rowToForm, rowToResponse } from "@/lib/types"
+import { rowToForm, rowToResponse, type FormResponse } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -55,6 +55,15 @@ export default async function ResultsPage({ params }: Props) {
     .order("submitted_at", { ascending: false })
 
   const responses = (responseRows ?? []).map(rowToResponse)
+
+  // Surface custom fields added via the external submissions API (PATCH merges
+  // arbitrary keys into response.data). Any key not matching a form field id is
+  // an "extra" column that would otherwise be stored but never displayed.
+  const fieldIds = new Set<string>(form.fields.map((f) => f.id))
+  const extraKeys: string[] = Array.from(
+    new Set<string>((responses as FormResponse[]).flatMap((r) => Object.keys(r.data ?? {})))
+  ).filter((k) => !fieldIds.has(k))
+
   const isApproval = form.form_type === "approval"
   const { byResponseId: approvalsByResponseId } = isApproval
     ? await getResponseApprovalsByForm(id)
@@ -166,6 +175,7 @@ export default async function ResultsPage({ params }: Props) {
                 formName={form.name}
                 approvalsByResponseId={approvalsByResponseId}
                 showApprovalColumns={isApproval}
+                extraKeys={extraKeys}
               />
             </div>
           </div>
@@ -175,6 +185,7 @@ export default async function ResultsPage({ params }: Props) {
             approvalsByResponseId={approvalsByResponseId}
             showApprovalColumns={isApproval}
             formId={id}
+            extraKeys={extraKeys}
           />
         </div>
       </main>

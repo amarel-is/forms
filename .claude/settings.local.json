@@ -24,7 +24,10 @@
       "Bash(git commit --amend -m ' *)",
       "Bash(git push *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git commit --amend -m 'Add Microsoft Clarity analytics to root layout' -m 'Loads the Clarity tag site-wide via next/script \\(afterInteractive\\) so we get session replay and heatmaps without blocking render. *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(node_modules/.bin/tsc --noEmit)"
     ]
   }
 }
