@@ -95,6 +95,10 @@ const AIFieldSchema = z.object({
   paragraph_style: z
     .enum(["default", "info", "success", "warning", "danger"])
     .nullable(),
+  image_fit: z
+    .enum(["cover", "contain"])
+    .nullable()
+    .describe("image field display: cover crops to a fixed width, contain shows the full image in its original aspect ratio"),
   validation_type: z.enum(VALIDATION_TYPES).nullable(),
   validation_pattern: z.string().nullable().describe("regex when validation_type=custom_regex"),
   min: z.number().nullable(),
@@ -210,7 +214,7 @@ Layout / display fields (no answer collected):
 - heading, subheading: titles / sub-titles
 - paragraph: styled paragraph (put the body in content, choose paragraph_style from default/info/success/warning/danger)
 - divider: horizontal separator
-- image: put image URL in content; label is alt text
+- image: put image URL in content; label is alt text. Optional image_fit: "cover" (default, crops to fixed width) or "contain" (shows the full image in its original aspect ratio)
 - link: put URL in content; label is the clickable text
 - section: opens a visual group — all following fields belong to this section until the next section field. Use sections liberally for organizing long forms into clear areas.
 
@@ -342,6 +346,7 @@ function buildFieldConfig(af: AIField, maps: KeyMaps, allAiFields: AIField[]): F
   if (af.paragraph_style && af.paragraph_style !== "default") {
     config.paragraph_style = af.paragraph_style
   }
+  if (af.image_fit === "contain") config.image_fit = "contain"
 
   if (af.validation_type && af.validation_type !== "none") {
     config.validation = {
@@ -609,6 +614,7 @@ const UpdateFieldParams = z.object({
     paragraph_style: z
       .enum(["default", "info", "success", "warning", "danger"])
       .nullable(),
+    image_fit: z.enum(["cover", "contain"]).nullable(),
     validation_type: z.enum(VALIDATION_TYPES).nullable(),
     validation_pattern: z.string().nullable(),
     min: z.number().nullable(),
@@ -750,6 +756,7 @@ function applyToolCalls(
           if (u.paragraph_style && u.paragraph_style !== "default") {
             field.paragraph_style = u.paragraph_style
           }
+          if (u.image_fit) field.image_fit = u.image_fit
           if (u.validation_type && u.validation_type !== "none") {
             field.validation = {
               type: u.validation_type,

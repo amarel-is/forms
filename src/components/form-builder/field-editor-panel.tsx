@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react"
 import {
   Plus, X, ImageIcon, LogIn, LogOut, Link2, PenLine,
-  Upload, Loader2, Star, MapPin, Clock,
+  Upload, Loader2, Star, MapPin, Clock, Crop, Maximize2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -446,13 +446,50 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
               className="h-9 rounded-xl text-sm"
             />
           </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
+              אופן הצגת התמונה
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => update({ image_fit: "cover" })}
+                className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3 text-center transition-colors ${
+                  (field.image_fit ?? "cover") === "cover"
+                    ? "border-orange-400 bg-orange-50 text-orange-700"
+                    : "border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300"
+                }`}
+              >
+                <Crop className="h-5 w-5" />
+                <span className="text-xs font-medium">חיתוך לרוחב</span>
+                <span className="text-[10px] leading-tight text-neutral-400">גובה אחיד, ייתכן חיתוך</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => update({ image_fit: "contain" })}
+                className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3 text-center transition-colors ${
+                  field.image_fit === "contain"
+                    ? "border-orange-400 bg-orange-50 text-orange-700"
+                    : "border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300"
+                }`}
+              >
+                <Maximize2 className="h-5 w-5" />
+                <span className="text-xs font-medium">תמונה מלאה</span>
+                <span className="text-[10px] leading-tight text-neutral-400">ביחס מקורי, ללא חיתוך</span>
+              </button>
+            </div>
+          </div>
           <div className="bg-neutral-50 rounded-xl border border-neutral-100 overflow-hidden">
             {(field.content ?? "").length > 4 ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={field.content}
                 alt={field.label || "תצוגה מקדימה"}
-                className="w-full max-h-40 object-cover"
+                className={
+                  field.image_fit === "contain"
+                    ? "w-full h-auto"
+                    : "w-full max-h-40 object-cover"
+                }
                 onError={(e) => {
                   ;(e.currentTarget as HTMLImageElement).style.display = "none"
                   ;(e.currentTarget.nextSibling as HTMLElement | null)?.classList.remove("hidden")

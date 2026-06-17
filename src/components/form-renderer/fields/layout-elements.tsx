@@ -102,13 +102,20 @@ export function ImageElement({ field }: LayoutElementProps) {
   const src = field.content ?? field.placeholder ?? ""
   if (!src) return null
 
+  // "contain" shows the full image without cropping; "cover" (default) crops to width.
+  const fullAspect = field.image_fit === "contain"
+
   return (
     <div className="overflow-hidden rounded-2xl border border-neutral-100">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt={field.label || ""}
-        className="w-full max-h-64 sm:max-h-80 object-cover"
+        className={
+          fullAspect
+            ? "w-full h-auto"
+            : "w-full max-h-64 sm:max-h-80 object-cover"
+        }
         onError={(e) => {
           const el = e.currentTarget as HTMLImageElement
           el.style.display = "none"
