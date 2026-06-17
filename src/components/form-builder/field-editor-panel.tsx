@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import {
   Plus, X, ImageIcon, LogIn, LogOut, Link2, PenLine,
   Upload, Loader2, Star, MapPin, Clock,
@@ -73,9 +73,7 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
     onChange({ ...field, ...patch })
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  function uploadFile(file: File) {
     setUploadError(null)
     const fd = new FormData()
     fd.append("file", file)
@@ -89,6 +87,47 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
       if (fileInputRef.current) fileInputRef.current.value = ""
     })
   }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploadFile(file)
+  }
+
+  function imageFromClipboard(data: DataTransfer | null): File | null {
+    if (!data) return null
+    const item = Array.from(data.items).find((i) => i.type.startsWith("image/"))
+    return item?.getAsFile() ?? null
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const file = imageFromClipboard(e.clipboardData)
+    if (!file) return
+    e.preventDefault()
+    uploadFile(file)
+  }
+
+  // While the image editor is open, allow pasting an image anywhere in the panel
+  // (e.g. a screenshot or a WhatsApp photo copied to the clipboard) without
+  // first having to focus the dropzone.
+  const uploadFileRef = useRef(uploadFile)
+  uploadFileRef.current = uploadFile
+  useEffect(() => {
+    if (field.type !== "image") return
+    function onDocPaste(e: ClipboardEvent) {
+      const data = e.clipboardData
+      if (!data) return
+      const item = Array.from(data.items).find((i) =>
+        i.type.startsWith("image/")
+      )
+      const file = item?.getAsFile()
+      if (!file) return
+      e.preventDefault()
+      uploadFileRef.current(file)
+    }
+    document.addEventListener("paste", onDocPaste)
+    return () => document.removeEventListener("paste", onDocPaste)
+  }, [field.type])
 
   function addOption() {
     const trimmed = newOption.trim()
@@ -366,8 +405,9 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
+              onPaste={handlePaste}
               disabled={isPending}
-              className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50 py-5 text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50 py-5 text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 focus:outline-none focus:border-orange-400 focus:text-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPending ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -375,7 +415,7 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
                 <Upload className="h-5 w-5" />
               )}
               <span className="text-xs font-medium">
-                {isPending ? "מעלה..." : "לחץ לבחירת קובץ"}
+                {isPending ? "מעלה..." : "לחץ לבחירת קובץ או הדבק תמונה (Ctrl+V)"}
               </span>
               <span className="text-[11px] text-neutral-300">JPG, PNG, GIF, WEBP, SVG · עד 5MB</span>
             </button>
