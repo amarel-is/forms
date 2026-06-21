@@ -44,7 +44,8 @@
       "Bash(git commit -m 'Teach AI builders the custom-CSS capability *)",
       "Bash(find src *)",
       "Bash(ls middleware.ts)",
-      "Bash(find . -maxdepth 2 -name \"middleware.ts\" -not -path \"*/node_modules/*\")"
+      "Bash(find . -maxdepth 2 -name \"middleware.ts\" -not -path \"*/node_modules/*\")",
+      "Bash(git commit -m 'Add self-registration with admin approval *)"
     ]
   }
 }
