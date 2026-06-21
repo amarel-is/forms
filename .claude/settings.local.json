@@ -34,7 +34,11 @@
       "Bash(git commit -m 'Accept top-level fields in submissions PATCH API' -m 'External consumers \\(Make.com\\) naturally send PATCH fields at the top level of *)",
       "Bash(git show *)",
       "Bash(git commit --amend -m 'Fix large-image upload 400 and add paste-to-upload for image field *)",
-      "Bash(git commit -m 'Add image display-fit option \\(crop vs full aspect ratio\\) *)"
+      "Bash(git commit -m 'Add image display-fit option \\(crop vs full aspect ratio\\) *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('scripts:',Object.keys\\(p.scripts||{}\\).join\\(', '\\)\\)\")",
+      "Bash(echo \"---EXIT:$?---\")",
+      "Bash(git stash *)",
+      "Bash(npx eslint *)"
     ]
   }
 }

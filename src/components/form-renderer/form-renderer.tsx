@@ -464,7 +464,7 @@ export function FormRenderer({ form }: FormRendererProps) {
                 )
               }
               return (
-                <div key={field.id} id={`field-${field.id}`}>
+                <div key={field.id} id={`field-${field.id}`} data-field data-field-type={field.type}>
                   <FieldRenderer
                     field={field}
                     value={isLayoutField(field.type) ? "" : values[field.id]}
@@ -508,6 +508,7 @@ export function FormRenderer({ form }: FormRendererProps) {
         <div className="hidden sm:block">
           <Button
             type="submit"
+            data-form-submit
             className="w-full h-12 rounded-xl font-semibold text-base"
             disabled={submitting}
           >
@@ -523,6 +524,7 @@ export function FormRenderer({ form }: FormRendererProps) {
           <div className="pt-3">
             <Button
               type="submit"
+              data-form-submit
               className="w-full h-14 rounded-2xl font-bold text-base shadow-sm"
               disabled={submitting}
             >

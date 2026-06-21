@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { FormRenderer } from "@/components/form-renderer/form-renderer"
+import { FormStyle, FORM_ROOT_ID } from "@/components/form-renderer/form-style"
 import { createClient } from "@/lib/supabase/server"
 import { rowToForm } from "@/lib/types"
 
@@ -109,15 +110,17 @@ export default async function PublicFillPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-100" dir="rtl">
+    <div id={FORM_ROOT_ID} className="min-h-screen bg-neutral-100" dir="rtl">
+      <FormStyle css={form.settings?.custom_css} />
       <div className="px-4 pt-8 pb-32 sm:py-12 sm:pb-12 max-w-md mx-auto">
 
         {/* Unified form card — matches preview exactly */}
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+        <div data-form-card className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
 
           {/* Header — same border-b as preview */}
-          <div className="px-6 pt-6 pb-4 border-b border-neutral-100">
+          <div data-form-header className="px-6 pt-6 pb-4 border-b border-neutral-100">
             <h1
+              data-form-title
               className="text-xl font-bold text-neutral-900"
               style={{ textAlign: form.settings?.title_align ?? "right" }}
             >
@@ -125,6 +128,7 @@ export default async function PublicFillPage({ params }: Props) {
             </h1>
             {form.description && (
               <div
+                data-form-description
                 className="text-sm text-neutral-500 mt-1.5 leading-relaxed rich-text"
                 dangerouslySetInnerHTML={{ __html: form.description }}
               />
@@ -132,7 +136,7 @@ export default async function PublicFillPage({ params }: Props) {
           </div>
 
           {/* Fields */}
-          <div className="px-6 py-5 space-y-5">
+          <div data-form-body className="px-6 py-5 space-y-5">
             {form.fields.length === 0 ? (
               <p className="text-center text-neutral-400 text-sm py-10">
                 לטופס זה אין שדות עדיין.

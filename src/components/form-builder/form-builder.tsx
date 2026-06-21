@@ -172,6 +172,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const [redirectParams, setRedirectParams] = useState<Array<{ field_id: string; param_name: string }>>(
     initialForm?.settings?.redirect_params ?? []
   )
+  const [customCss, setCustomCss] = useState(
+    initialForm?.settings?.custom_css ?? ""
+  )
   const [aiChatOpen, setAiChatOpen] = useState(false)
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false)
 
@@ -195,6 +198,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       submissionStartDate: initialForm?.settings?.submission_start_date ?? "",
       submissionEndDate: initialForm?.settings?.submission_end_date ?? "",
       redirectParams: initialForm?.settings?.redirect_params ?? [],
+      customCss: initialForm?.settings?.custom_css ?? "",
     })
   )
 
@@ -203,10 +207,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       name, description, fields, formType, submitLabel,
       afterSubmit, redirectUrl, titleAlign, hideBranding,
       submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
-      submissionStartDate, submissionEndDate, redirectParams,
+      submissionStartDate, submissionEndDate, redirectParams, customCss,
     })
     return current !== savedSnapshotRef.current
-  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams])
+  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, customCss])
 
   useUnsavedChanges(isDirty)
 
@@ -409,6 +413,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
             } : {}),
             ...(submissionStartDate ? { submission_start_date: submissionStartDate } : {}),
             ...(submissionEndDate ? { submission_end_date: submissionEndDate } : {}),
+            ...(customCss.trim() ? { custom_css: customCss } : {}),
             ...(dirField && { attendance_direction_field: dirField.id }),
             ...(idField && { attendance_id_field: idField.id }),
             ...(formType === "approval" ? {
@@ -452,7 +457,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           name, description, fields, formType, submitLabel,
           afterSubmit, redirectUrl, titleAlign, hideBranding,
           submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
-          submissionStartDate, submissionEndDate, redirectParams,
+          submissionStartDate, submissionEndDate, redirectParams, customCss,
         })
 
         if (publish !== undefined) {
@@ -469,7 +474,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         setPublishing(false)
       }
     },
-    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
+    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, customCss, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
   )
 
   return (
@@ -1103,6 +1108,29 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
                   <Separator />
 
+                  {/* Custom CSS (advanced) */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide flex items-center gap-1.5">
+                      <Code className="h-3.5 w-3.5" />
+                      עיצוב מותאם (CSS)
+                    </Label>
+                    <Textarea
+                      dir="ltr"
+                      spellCheck={false}
+                      value={customCss}
+                      onChange={(e) => setCustomCss(e.target.value)}
+                      placeholder={`/* מתקדם — CSS מותאם לטופס. אחיזות זמינות:\n   :scope { }          רקע העמוד\n   [data-form-card] { } כרטיס הטופס\n   [data-form-title] { } כותרת\n   [data-field] { }     שדה\n   [data-form-submit] { } כפתור שליחה */\n[data-form-submit] {\n  background: #ea580c;\n}`}
+                      className="min-h-[140px] rounded-lg font-mono text-[11px] leading-relaxed"
+                    />
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">
+                      ה-CSS חל רק על הטופס (scoped), לא מריץ קוד, ונראה מיד בתצוגה המקדימה. ייתכן שתצטרך
+                      <code className="mx-1 px-1 rounded bg-neutral-100 text-neutral-600">!important</code>
+                      כדי לדרוס עיצוב קיים.
+                    </p>
+                  </div>
+
+                  <Separator />
+
                   {/* Datasets (mini databases) */}
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide flex items-center gap-1.5">
@@ -1242,6 +1270,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
               submitLabel={
                 submitLabel.trim() || (formType === "attendance" ? "שלח דיווח" : "שלח")
               }
+              customCss={customCss}
               selectedFieldId={selectedField?.id ?? null}
               onSelectField={selectField}
             />

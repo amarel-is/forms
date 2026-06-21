@@ -160,6 +160,7 @@ export interface FormSettings {
   submission_start_date?: string      // YYYY-MM-DD — form not open before this date (Israel timezone)
   submission_end_date?: string        // YYYY-MM-DD — form closed after this date (Israel timezone)
   redirect_params?: Array<{ field_id: string; param_name: string }>
+  custom_css?: string             // advanced: raw CSS injected into the public/embed form, scoped to #amrl-form-root
 }
 
 // ─── Per-form datasets ("mini databases") ────────────────────────────────────

@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { isLayoutField, type FieldConfig } from "@/lib/types"
+import { FormStyle, FORM_ROOT_ID } from "@/components/form-renderer/form-style"
 
 interface FormPreviewProps {
   name: string
@@ -28,6 +29,7 @@ interface FormPreviewProps {
   titleAlign?: "right" | "center" | "left"
   fields: FieldConfig[]
   submitLabel: string
+  customCss?: string
   selectedFieldId: string | null
   onSelectField: (id: string) => void
 }
@@ -38,19 +40,22 @@ export function FormPreview({
   titleAlign = "right",
   fields,
   submitLabel,
+  customCss,
   selectedFieldId,
   onSelectField,
 }: FormPreviewProps) {
   return (
-    <div className="h-full overflow-y-auto bg-neutral-100" dir="rtl">
+    <div id={FORM_ROOT_ID} className="h-full overflow-y-auto bg-neutral-100" dir="rtl">
+      <FormStyle css={customCss} />
       {/* Phone-frame wrapper */}
       <div className="min-h-full py-8 px-6 flex justify-center">
         <div className="w-full max-w-md">
           {/* Form card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+          <div data-form-card className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
             {/* Form header */}
-            <div className="px-6 pt-6 pb-4 border-b border-neutral-100">
+            <div data-form-header className="px-6 pt-6 pb-4 border-b border-neutral-100">
               <h1
+                data-form-title
                 className="text-xl font-bold text-neutral-900"
                 style={{ textAlign: titleAlign }}
               >
@@ -58,6 +63,7 @@ export function FormPreview({
               </h1>
               {description && (
                 <div
+                  data-form-description
                   className="text-sm text-neutral-500 mt-1.5 leading-relaxed rich-text"
                   dangerouslySetInnerHTML={{ __html: description }}
                 />
@@ -65,7 +71,7 @@ export function FormPreview({
             </div>
 
             {/* Fields */}
-            <div className="px-6 py-5 space-y-5">
+            <div data-form-body className="px-6 py-5 space-y-5">
               {fields.length === 0 ? (
                 <div className="py-10 text-center">
                   <p className="text-sm text-neutral-400">
@@ -76,6 +82,8 @@ export function FormPreview({
                 fields.map((field) => (
                   <div
                     key={field.id}
+                    data-field
+                    data-field-type={field.type}
                     onClick={() => onSelectField(field.id)}
                     className={`group relative rounded-xl transition-all duration-100 cursor-pointer ${
                       selectedFieldId === field.id
@@ -96,7 +104,7 @@ export function FormPreview({
 
               {/* Submit button preview */}
               <div className="pt-2">
-                <div className="w-full h-12 rounded-xl bg-neutral-900 flex items-center justify-center">
+                <div data-form-submit className="w-full h-12 rounded-xl bg-neutral-900 flex items-center justify-center">
                   <span className="text-white font-semibold text-sm">
                     {submitLabel || "שלח"}
                   </span>
