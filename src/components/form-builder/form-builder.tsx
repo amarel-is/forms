@@ -1384,6 +1384,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           if (u.submission_limit_error_message !== undefined) setSubmissionLimitErrorMessage(u.submission_limit_error_message)
           if (u.submission_start_date !== undefined) setSubmissionStartDate(u.submission_start_date)
           if (u.submission_end_date !== undefined) setSubmissionEndDate(u.submission_end_date)
+          if (u.custom_css !== undefined) setCustomCss(u.custom_css)
         }}
         onApprovalStepsUpdate={(steps) => {
           if (!steps || steps.length === 0) {

@@ -179,11 +179,27 @@ const FormGenerationSchema = z.object({
   submission_limit_error_message: z.string().nullable(),
   submission_start_date: z.string().nullable().describe("YYYY-MM-DD, Israel timezone"),
   submission_end_date: z.string().nullable(),
+  custom_css: z.string().nullable().describe("raw scoped CSS for visual styling — only when the user asks to design/style the form"),
   datasets: z.array(AIDatasetSchema).nullable(),
   fields: z.array(AIFieldSchema),
   approval_workflow: AIApprovalWorkflowSchema.nullable(),
   approval_field_visibility: AIApprovalVisibilitySchema.nullable(),
 })
+
+// ─── Custom CSS capability (shared between one-shot + editor prompts) ────────
+
+const CUSTOM_CSS_DOC = `CUSTOM CSS (visual styling)
+The form can carry raw CSS in the "custom_css" setting. Use it ONLY when the user explicitly asks to change the LOOK / design / colors / styling of the form (e.g. "עצב את הטופס", "כפתור כתום", "רקע כהה", "צבעי החברה"). For content/structure changes, do NOT touch custom_css.
+The CSS is auto-scoped to the form (injected via @scope), so write plain selectors using these stable hooks — never invent class names, and never target body/:root (they won't apply):
+- :scope                  → the page background behind the card
+- [data-form-card]        → the form card itself
+- [data-form-header]      → the title + description block
+- [data-form-title]       → the form title (h1)
+- [data-form-description] → the description text
+- [data-form-body]        → the fields container
+- [data-field]            → a single field wrapper (target a type with [data-field-type="text"|"dropdown"|"radio"|"number"|...]); inputs are [data-field] input, [data-field] select
+- [data-form-submit]      → the submit button
+Because Tailwind utility classes already style the form, append !important to declarations that must win (e.g. background, color, border-radius). Output ONLY CSS (no <style> tag, no markdown fences, no JS). When updating an existing design, return the COMPLETE css (it replaces the previous value).`
 
 // ─── System prompt with full capabilities ──────────────────────────────────
 
@@ -274,6 +290,8 @@ DESIGN GUIDELINES
 - Put a welcoming paragraph at the top if the form is public-facing.
 - Pick required=true only for truly needed fields.
 - Hebrew submit_label (e.g., "שלח טופס", "שלח דיווח").
+
+${CUSTOM_CSS_DOC}
 `
 
 // ─── Key-mapping helpers ───────────────────────────────────────────────────
@@ -522,6 +540,7 @@ export async function generateFormWithAI(
     }
     if (parsed.submission_start_date) settings.submission_start_date = parsed.submission_start_date
     if (parsed.submission_end_date) settings.submission_end_date = parsed.submission_end_date
+    if (parsed.custom_css?.trim()) settings.custom_css = parsed.custom_css
 
     // Approval workflow
     if (parsed.approval_workflow && parsed.approval_workflow.enabled) {
@@ -651,6 +670,10 @@ const UpdateFormSettingsParams = z.object({
   submission_limit_error_message: z.string().nullable(),
   submission_start_date: z.string().nullable().describe("YYYY-MM-DD"),
   submission_end_date: z.string().nullable(),
+  custom_css: z
+    .string()
+    .nullable()
+    .describe("raw scoped CSS for visual styling — only when the user asks to design/style the form; pass the complete CSS (it replaces the previous value), or empty string to clear it"),
 })
 
 const SetApprovalWorkflowParams = z.object({
@@ -667,7 +690,9 @@ Field-level tools:
 - reorder_field: Move a field.
 
 Form-level tools:
-- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits per-ID, submission date window). Only pass the fields you want to change; leave the rest null. For submission_limit_field_id use the exact id of an existing field from the context below.
+- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits per-ID, submission date window, custom_css). Only pass the fields you want to change; leave the rest null. For submission_limit_field_id use the exact id of an existing field from the context below.
+
+${CUSTOM_CSS_DOC}
 - set_approval_workflow: Replace the entire approval workflow. Set enabled=true and provide the ordered list of steps. Each step has approver_name (Hebrew), channel ("email"|"whatsapp"), and source_type: "fixed" (target = email/phone), "from_field" (source_field_key = existing field id), or "from_option_map" (source_field_key + target_by_value array). To clear the workflow pass enabled=false with steps=[].
 
 The current form fields appear below (each with its id — use the id as field_key / source_field_key / submission_limit_field_id in tool arguments). You can call multiple tools in one response.
@@ -703,6 +728,7 @@ export interface ChatSettingsUpdate {
   submission_limit_error_message?: string
   submission_start_date?: string
   submission_end_date?: string
+  custom_css?: string
 }
 
 function applyToolCalls(
@@ -823,6 +849,7 @@ function applyToolCalls(
         if (parsed.submission_limit_error_message !== null) { settings.submission_limit_error_message = parsed.submission_limit_error_message }
         if (parsed.submission_start_date !== null) { settings.submission_start_date = parsed.submission_start_date; changed.push("תאריך פתיחה") }
         if (parsed.submission_end_date !== null) { settings.submission_end_date = parsed.submission_end_date; changed.push("תאריך סגירה") }
+        if (parsed.custom_css !== null) { settings.custom_css = parsed.custom_css; changed.push("עיצוב CSS") }
         if (changed.length > 0) summary.push(`הגדרות עודכנו: ${changed.join(", ")}`)
         break
       }
@@ -946,7 +973,7 @@ export async function chatWithFormAI(input: {
         zodFunction({
           name: "update_form_settings",
           parameters: UpdateFormSettingsParams,
-          description: "Update form-level settings (form type, submit label, hide branding, submission limits, date window, etc.)",
+          description: "Update form-level settings (form type, submit label, hide branding, submission limits, date window, custom_css for visual styling, etc.)",
         }),
         zodFunction({
           name: "set_approval_workflow",

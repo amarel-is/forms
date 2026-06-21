@@ -38,7 +38,9 @@
       "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('scripts:',Object.keys\\(p.scripts||{}\\).join\\(', '\\)\\)\")",
       "Bash(echo \"---EXIT:$?---\")",
       "Bash(git stash *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(git commit --amend -m 'Add per-form custom CSS styling *)",
+      "Bash(echo \"---TSC EXIT:$?---\")"
     ]
   }
 }
