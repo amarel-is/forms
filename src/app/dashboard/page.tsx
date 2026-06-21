@@ -1,5 +1,7 @@
 import { Metadata } from "next"
+import Link from "next/link"
 import { redirect } from "next/navigation"
+import { UserCheck } from "lucide-react"
 import { EmptyState } from "@/components/dashboard/empty-state"
 import { DashboardContent } from "@/components/dashboard/dashboard-content"
 import { SuperadminUserPicker } from "@/components/dashboard/superadmin-user-picker"
@@ -8,6 +10,7 @@ import { AppHeader } from "@/components/layout/amarel-nav"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getUsers } from "@/lib/actions/admin"
+import { listPendingUsers } from "@/lib/actions/auth"
 import { rowToForm } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -60,11 +63,14 @@ export default async function DashboardPage({
     ? createAdminClient()
     : supabase
 
-  const [formsWithCounts, users] = await Promise.all([
+  const [formsWithCounts, users, pending] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getFormsWithCounts(queryClient as any, viewingUserId),
     isSuperadmin ? getUsers() : Promise.resolve([]),
+    isSuperadmin ? listPendingUsers() : Promise.resolve({ users: [] }),
   ])
+
+  const pendingCount = pending.users?.length ?? 0
 
   const viewingEmail = isSuperadmin && viewingUserId !== user.id
     ? (users.find((u) => u.id === viewingUserId)?.email ?? viewingUserId)
@@ -80,11 +86,27 @@ export default async function DashboardPage({
 
       <main id="main-content" className="max-w-6xl mx-auto px-4 sm:px-6 py-8" tabIndex={-1}>
         {isSuperadmin && (
-          <SuperadminUserPicker
-            users={users}
-            selectedUserId={viewingUserId}
-            currentUserId={user.id}
-          />
+          <>
+            <div className="mb-4 flex justify-end">
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 shadow-sm"
+              >
+                <UserCheck className="h-4 w-4" />
+                ניהול משתמשים
+                {pendingCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-orange-600 text-white text-[11px] font-bold">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+            </div>
+            <SuperadminUserPicker
+              users={users}
+              selectedUserId={viewingUserId}
+              currentUserId={user.id}
+            />
+          </>
         )}
 
         <div className="flex items-center justify-between mb-6">

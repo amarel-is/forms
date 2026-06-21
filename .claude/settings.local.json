@@ -40,7 +40,11 @@
       "Bash(git stash *)",
       "Bash(npx eslint *)",
       "Bash(git commit --amend -m 'Add per-form custom CSS styling *)",
-      "Bash(echo \"---TSC EXIT:$?---\")"
+      "Bash(echo \"---TSC EXIT:$?---\")",
+      "Bash(git commit -m 'Teach AI builders the custom-CSS capability *)",
+      "Bash(find src *)",
+      "Bash(ls middleware.ts)",
+      "Bash(find . -maxdepth 2 -name \"middleware.ts\" -not -path \"*/node_modules/*\")"
     ]
   }
 }

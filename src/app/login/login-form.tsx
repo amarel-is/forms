@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2, Mail } from "lucide-react"
@@ -10,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 
-type Mode = "signin" | "signup"
 type Step = "credentials" | "otp"
 
 function translateAuthError(message: string): string {
@@ -38,7 +38,6 @@ function translateAuthError(message: string): string {
 
 export default function LoginForm() {
   const router = useRouter()
-  const [mode, setMode] = useState<Mode>("signin")
   const [step, setStep] = useState<Step>("credentials")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -51,32 +50,35 @@ export default function LoginForm() {
     const supabase = createClient()
 
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password })
-        if (error) throw error
-        toast.success("חשבון נוצר! בדוק את האימייל שלך לאימות.")
-      } else {
-        // Step 1: verify password
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) throw signInError
+      // Step 1: verify password
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) throw signInError
 
-        // Superadmin bypasses OTP
-        if (signInData.user?.user_metadata?.superadmin === true) {
-          router.push("/dashboard")
-          router.refresh()
-          return
-        }
-
-        // Step 2: send OTP to email as second factor
-        const { error: otpError } = await supabase.auth.signInWithOtp({
-          email,
-          options: { shouldCreateUser: false },
-        })
-        if (otpError) throw otpError
-
-        toast.success("קוד אימות נשלח לאימייל שלך")
-        setStep("otp")
+      // Superadmin bypasses OTP
+      if (signInData.user?.user_metadata?.superadmin === true) {
+        router.push("/dashboard")
+        router.refresh()
+        return
       }
+
+      // Gate self-registered accounts that haven't been approved by an admin yet.
+      // Existing users predate this flow and have no `approved` key — only block
+      // when it is explicitly false.
+      if (signInData.user?.user_metadata?.approved === false) {
+        await supabase.auth.signOut()
+        toast.error("החשבון ממתין לאישור מנהל המערכת")
+        return
+      }
+
+      // Step 2: send OTP to email as second factor
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      })
+      if (otpError) throw otpError
+
+      toast.success("קוד אימות נשלח לאימייל שלך")
+      setStep("otp")
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : ""
       toast.error(translateAuthError(raw))
@@ -220,12 +222,12 @@ export default function LoginForm() {
             <Input
               id="password"
               type="password"
-              placeholder={mode === "signup" ? "לפחות 6 תווים" : "••••••••"}
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              autoComplete="current-password"
               className="h-10 rounded-xl"
               dir="ltr"
             />
@@ -236,41 +238,16 @@ export default function LoginForm() {
             className="w-full h-10 rounded-xl font-medium"
             disabled={loading}
           >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : mode === "signin" ? (
-              "כניסה"
-            ) : (
-              "יצירת חשבון"
-            )}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "כניסה"}
           </Button>
         </CardContent>
 
         <CardFooter className="pb-6 flex justify-center">
           <p className="text-sm text-neutral-500">
-            {mode === "signin" ? (
-              <>
-                אין לך חשבון?{" "}
-                <button
-                  type="button"
-                  onClick={() => setMode("signup")}
-                  className="text-neutral-900 font-medium hover:underline"
-                >
-                  הרשמה
-                </button>
-              </>
-            ) : (
-              <>
-                כבר יש לך חשבון?{" "}
-                <button
-                  type="button"
-                  onClick={() => setMode("signin")}
-                  className="text-neutral-900 font-medium hover:underline"
-                >
-                  כניסה
-                </button>
-              </>
-            )}
+            אין לך חשבון?{" "}
+            <Link href="/signup" className="text-neutral-900 font-medium hover:underline">
+              הרשמה
+            </Link>
           </p>
         </CardFooter>
       </form>
