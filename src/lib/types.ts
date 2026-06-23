@@ -154,8 +154,9 @@ export interface FormSettings {
   hide_branding?: boolean         // hide "מופעל על ידי אמרל טפסים" in public/embed views
   approval_workflow?: ApprovalWorkflow
   approval_field_visibility?: ApprovalFieldVisibility
-  submission_limit_field_id?: string  // field whose value is the unique identifier for limiting submissions
-  submission_limit_count?: number     // max submissions allowed per unique value (default: 1)
+  submission_limit_mode?: "field" | "device"  // how to limit submissions: by a unique field value (default) or per device (no ID field — for live voting)
+  submission_limit_field_id?: string  // field whose value is the unique identifier for limiting submissions (mode = "field")
+  submission_limit_count?: number     // max submissions allowed per unique value/device (default: 1)
   submission_limit_error_message?: string // custom error shown when limit is exceeded
   submission_start_date?: string      // YYYY-MM-DD — form not open before this date (Israel timezone)
   submission_end_date?: string        // YYYY-MM-DD — form closed after this date (Israel timezone)

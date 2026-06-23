@@ -46,8 +46,13 @@ create table if not exists responses (
   id            uuid primary key default gen_random_uuid(),
   form_id       uuid not null references forms(id) on delete cascade,
   data          jsonb not null default '{}'::jsonb,
+  device_id     text,
   submitted_at  timestamptz not null default now()
 );
+
+-- Per-device submission limiting (e.g. live one-time voting).
+alter table responses add column if not exists device_id text;
+create index if not exists responses_form_device_idx on responses (form_id, device_id);
 
 -- ─────────────────────────────────────────────
 -- NOTIFICATIONS table
@@ -86,9 +91,11 @@ create trigger on_new_response_notify
 -- ─────────────────────────────────────────────
 -- PUBLIC SUBMISSION RPC
 -- ─────────────────────────────────────────────
+drop function if exists submit_response_public(uuid, jsonb);
 create or replace function submit_response_public(
   p_form_id uuid,
-  p_data jsonb
+  p_data jsonb,
+  p_device_id text default null
 )
 returns uuid
 language plpgsql
@@ -98,6 +105,7 @@ as $$
 declare
   v_response_id    uuid;
   v_settings       jsonb;
+  v_limit_mode     text;
   v_limit_field_id text;
   v_limit_count    integer;
   v_submitted_val  text;
@@ -131,46 +139,63 @@ begin
     raise exception 'submission_deadline_passed';
   end if;
 
-  -- Check submission limit by unique field identifier.
-  v_limit_field_id := v_settings->>'submission_limit_field_id';
+  -- Check submission limit. Two modes:
+  --   'device' — at most v_limit_count submissions per device fingerprint (no ID field; for live voting).
+  --   'field'  — (default) at most v_limit_count per unique value of a chosen field.
+  v_limit_mode     := coalesce(v_settings->>'submission_limit_mode', 'field');
   v_limit_count    := coalesce((v_settings->>'submission_limit_count')::integer, 1);
 
-  if v_limit_field_id is not null and v_limit_field_id <> '' then
-    -- Extract the submitted value for the limit field (handle both scalar and array).
-    if jsonb_typeof(p_data->v_limit_field_id) = 'array' then
-      v_submitted_val := coalesce(p_data->v_limit_field_id->>0, '');
-    else
-      v_submitted_val := coalesce(p_data->>v_limit_field_id, '');
-    end if;
-
-    if v_submitted_val <> '' then
+  if v_limit_mode = 'device' then
+    if p_device_id is not null and p_device_id <> '' then
       select count(*) into v_existing_count
       from responses r
       where r.form_id = p_form_id
-        and (
-          case
-            when jsonb_typeof(r.data->v_limit_field_id) = 'array'
-              then r.data->v_limit_field_id->>0
-            else r.data->>v_limit_field_id
-          end
-        ) = v_submitted_val;
+        and r.device_id = p_device_id;
 
       if v_existing_count >= v_limit_count then
         raise exception 'submission_limit_exceeded';
       end if;
     end if;
+  else
+    v_limit_field_id := v_settings->>'submission_limit_field_id';
+
+    if v_limit_field_id is not null and v_limit_field_id <> '' then
+      -- Extract the submitted value for the limit field (handle both scalar and array).
+      if jsonb_typeof(p_data->v_limit_field_id) = 'array' then
+        v_submitted_val := coalesce(p_data->v_limit_field_id->>0, '');
+      else
+        v_submitted_val := coalesce(p_data->>v_limit_field_id, '');
+      end if;
+
+      if v_submitted_val <> '' then
+        select count(*) into v_existing_count
+        from responses r
+        where r.form_id = p_form_id
+          and (
+            case
+              when jsonb_typeof(r.data->v_limit_field_id) = 'array'
+                then r.data->v_limit_field_id->>0
+              else r.data->>v_limit_field_id
+            end
+          ) = v_submitted_val;
+
+        if v_existing_count >= v_limit_count then
+          raise exception 'submission_limit_exceeded';
+        end if;
+      end if;
+    end if;
   end if;
 
-  insert into responses (form_id, data)
-  values (p_form_id, coalesce(p_data, '{}'::jsonb))
+  insert into responses (form_id, data, device_id)
+  values (p_form_id, coalesce(p_data, '{}'::jsonb), nullif(p_device_id, ''))
   returning id into v_response_id;
 
   return v_response_id;
 end;
 $$;
 
-revoke all on function submit_response_public(uuid, jsonb) from public;
-grant execute on function submit_response_public(uuid, jsonb) to anon, authenticated;
+revoke all on function submit_response_public(uuid, jsonb, text) from public;
+grant execute on function submit_response_public(uuid, jsonb, text) to anon, authenticated;
 
 -- ─────────────────────────────────────────────
 -- APPROVAL tables (form_type = 'approval')

@@ -8,7 +8,8 @@ import { rowToResponse, type FormResponse } from "@/lib/types"
 
 export async function submitResponse(
   formId: string,
-  data: Record<string, string | string[]>
+  data: Record<string, string | string[]>,
+  deviceId?: string
 ): Promise<{ success?: boolean; error?: string; warning?: string; response_id?: string }> {
   const supabase = await createClient()
   let responseId: string | null = null
@@ -19,6 +20,7 @@ export async function submitResponse(
     {
       p_form_id: formId,
       p_data: data,
+      p_device_id: deviceId ?? null,
     }
   )
 
@@ -26,7 +28,8 @@ export async function submitResponse(
   if (rpcError) {
     // Known domain errors — return user-friendly messages, do not fall through to direct insert.
     if (rpcError.message === "submission_limit_exceeded") {
-      return { error: "הגשת כבר את הטופס עם מזהה זה." }
+      // deviceId is only sent in per-device mode → message it accordingly.
+      return { error: deviceId ? "כבר הצבעת מהמכשיר הזה." : "הגשת כבר את הטופס עם מזהה זה." }
     }
     if (rpcError.message === "submission_not_yet_open") {
       return { error: "הטופס טרם נפתח להגשה." }

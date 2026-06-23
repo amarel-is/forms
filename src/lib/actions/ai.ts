@@ -174,6 +174,10 @@ const FormGenerationSchema = z.object({
   redirect_url: z.string().nullable(),
   redirect_params: z.array(z.object({ field_key: z.string(), param_name: z.string() })).nullable(),
   hide_branding: z.boolean().nullable(),
+  submission_limit_mode: z
+    .enum(["field", "device"])
+    .nullable()
+    .describe('"device" = one submission per device for live voting (no ID field); "field" = per unique field value'),
   submission_limit_field_key: z.string().nullable(),
   submission_limit_count: z.number().nullable(),
   submission_limit_error_message: z.string().nullable(),
@@ -279,7 +283,8 @@ approval_workflow: {
 approval_field_visibility: which form fields the approver sees. mode "all" or "selected" (then list visible_field_keys). Use show_to_approver=false on any input field you want hidden from approvers in "all" mode.
 
 SUBMISSION CONTROLS
-- submission_limit_field_key + submission_limit_count + submission_limit_error_message: cap submissions per unique value (e.g., 1 per ת.ז.).
+- submission_limit_mode: "field" (default) caps per unique value of submission_limit_field_key (e.g., 1 per ת.ז.); "device" caps per device with NO ID field — use for live voting ("כל אחד מצביע פעם אחת" / בחירת זוכה על מסך) where you must not slow voters down with an identifier. With "device", set submission_limit_count (usually 1) and optionally submission_limit_error_message; do NOT set submission_limit_field_key.
+- submission_limit_field_key + submission_limit_count + submission_limit_error_message: cap submissions per unique value (field mode).
 - submission_start_date / submission_end_date: YYYY-MM-DD bounds (Israel timezone).
 - hide_branding: true to hide the Amarel powered-by footer.
 - after_submit="redirect" + redirect_url: external redirect after submit, otherwise "thank_you".
@@ -528,7 +533,13 @@ export async function generateFormWithAI(
     }
     if (parsed.hide_branding) settings.hide_branding = true
 
-    if (parsed.submission_limit_field_key && parsed.submission_limit_count) {
+    if (parsed.submission_limit_mode === "device") {
+      settings.submission_limit_mode = "device"
+      settings.submission_limit_count = parsed.submission_limit_count ?? 1
+      if (parsed.submission_limit_error_message) {
+        settings.submission_limit_error_message = parsed.submission_limit_error_message
+      }
+    } else if (parsed.submission_limit_field_key && parsed.submission_limit_count) {
       const limitFieldId = maps.fieldKeyToId.get(parsed.submission_limit_field_key)
       if (limitFieldId) {
         settings.submission_limit_field_id = limitFieldId
@@ -662,10 +673,14 @@ const UpdateFormSettingsParams = z.object({
   redirect_url: z.string().nullable(),
   redirect_params: z.array(z.object({ field_id: z.string(), param_name: z.string() })).nullable(),
   hide_branding: z.boolean().nullable(),
+  submission_limit_mode: z
+    .enum(["field", "device"])
+    .nullable()
+    .describe('"device" = one submission per device (live voting, no ID field); "field" = per unique field value'),
   submission_limit_field_id: z
     .string()
     .nullable()
-    .describe("Existing field id from context (used for per-value submission caps)"),
+    .describe("Existing field id from context (used for per-value submission caps; field mode only)"),
   submission_limit_count: z.number().nullable(),
   submission_limit_error_message: z.string().nullable(),
   submission_start_date: z.string().nullable().describe("YYYY-MM-DD"),
@@ -690,7 +705,7 @@ Field-level tools:
 - reorder_field: Move a field.
 
 Form-level tools:
-- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits per-ID, submission date window, custom_css). Only pass the fields you want to change; leave the rest null. For submission_limit_field_id use the exact id of an existing field from the context below.
+- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits, submission date window, custom_css). Only pass the fields you want to change; leave the rest null. Submission limiting has two modes via submission_limit_mode: "field" (default — cap per unique value of submission_limit_field_id, e.g. one per ת.ז.) or "device" (one submission per device with NO ID field — use this for live voting / "כל אחד מצביע פעם אחת" without asking for identifying details). For submission_limit_field_id use the exact id of an existing field from the context below.
 
 ${CUSTOM_CSS_DOC}
 - set_approval_workflow: Replace the entire approval workflow. Set enabled=true and provide the ordered list of steps. Each step has approver_name (Hebrew), channel ("email"|"whatsapp"), and source_type: "fixed" (target = email/phone), "from_field" (source_field_key = existing field id), or "from_option_map" (source_field_key + target_by_value array). To clear the workflow pass enabled=false with steps=[].
@@ -723,6 +738,7 @@ export interface ChatSettingsUpdate {
   redirect_url?: string
   redirect_params?: Array<{ field_id: string; param_name: string }>
   hide_branding?: boolean
+  submission_limit_mode?: "field" | "device"
   submission_limit_field_id?: string
   submission_limit_count?: number
   submission_limit_error_message?: string
@@ -841,6 +857,11 @@ function applyToolCalls(
         if (parsed.redirect_url !== null) { settings.redirect_url = parsed.redirect_url; changed.push("כתובת הפניה") }
         if (parsed.redirect_params !== null) { settings.redirect_params = parsed.redirect_params ?? undefined; changed.push("פרמטרי הפניה") }
         if (parsed.hide_branding !== null) { settings.hide_branding = parsed.hide_branding; changed.push("מיתוג") }
+        if (parsed.submission_limit_mode !== null) {
+          settings.submission_limit_mode = parsed.submission_limit_mode
+          if (parsed.submission_limit_mode === "device") settings.submission_limit_field_id = undefined
+          changed.push("מצב הגבלת הגשות")
+        }
         if (parsed.submission_limit_field_id !== null) {
           const exists = result.some((f) => f.id === parsed.submission_limit_field_id)
           if (exists) { settings.submission_limit_field_id = parsed.submission_limit_field_id; changed.push("מגבלת הגשות") }

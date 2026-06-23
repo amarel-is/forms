@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2, CheckCircle2, LogIn, LogOut, BookmarkCheck, Bookmark, Sparkles } from "lucide-react"
@@ -28,6 +28,7 @@ import {
 import { SignatureField } from "./fields/signature-field"
 import { RememberDialog, MEMORY_KEY, isSaveableField, type FormMemory } from "./remember-dialog"
 import { submitResponse } from "@/lib/actions/responses"
+import { getDeviceFingerprint, hasVotedLocally, markVotedLocally } from "@/lib/device-id"
 import ReactMarkdown from "react-markdown"
 import { computeAIField } from "@/lib/actions/ai"
 import { isLayoutField, type FieldConfig, type Form, type FormDataset } from "@/lib/types"
@@ -261,6 +262,16 @@ export function FormRenderer({ form }: FormRendererProps) {
   const [submitted, setSubmitted] = useState(false)
   const [rememberOpen, setRememberOpen] = useState(false)
 
+  // Per-device submission limiting (e.g. live one-time voting): block re-entry from the
+  // same browser without an ID field. localStorage is the instant client-side gate; the
+  // server enforces the real limit via a device fingerprint.
+  const deviceLimited = form.settings?.submission_limit_mode === "device"
+  const [alreadyVoted, setAlreadyVoted] = useState(false)
+
+  useEffect(() => {
+    if (deviceLimited && hasVotedLocally(form.id)) setAlreadyVoted(true)
+  }, [deviceLimited, form.id])
+
   // Track whether memory is active so we can show the indicator reactively
   const [memoryActive, setMemoryActive] = useState(() => hasActiveMemory(form.id))
 
@@ -357,10 +368,17 @@ export function FormRenderer({ form }: FormRendererProps) {
       const submittableValues = Object.fromEntries(
         Object.entries(values).filter(([id]) => visibleFieldIds.has(id))
       )
-      const result = await submitResponse(form.id, submittableValues)
+      const deviceId = deviceLimited ? await getDeviceFingerprint() : undefined
+      const result = await submitResponse(form.id, submittableValues, deviceId)
       if (result.error) {
         toast.error(result.error)
+        // Server rejected as a duplicate device → lock this browser too.
+        if (deviceLimited) {
+          markVotedLocally(form.id)
+          setAlreadyVoted(true)
+        }
       } else {
+        if (deviceLimited) markVotedLocally(form.id)
         if (result.warning) {
           toast.warning(result.warning)
         }
@@ -398,6 +416,22 @@ export function FormRenderer({ form }: FormRendererProps) {
     setRememberOpen(false)
     // Refresh the indicator after dialog closes
     setMemoryActive(hasActiveMemory(form.id))
+  }
+
+  // Device already used (and not the just-submitted "thank you" screen) → friendly lock.
+  if (alreadyVoted && !submitted) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-neutral-100">
+          <CheckCircle2 className="h-10 w-10 text-neutral-700" />
+        </div>
+        <h2 className="text-2xl font-bold text-neutral-900 mb-2">תודה!</h2>
+        <p className="text-base text-neutral-500 max-w-sm">
+          {form.settings?.submission_limit_error_message?.trim() ||
+            "כבר נקלטה הצבעה מהמכשיר הזה. ניתן להצביע פעם אחת בלבד."}
+        </p>
+      </div>
+    )
   }
 
   if (submitted) {
