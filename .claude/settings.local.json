@@ -45,7 +45,8 @@
       "Bash(find src *)",
       "Bash(ls middleware.ts)",
       "Bash(find . -maxdepth 2 -name \"middleware.ts\" -not -path \"*/node_modules/*\")",
-      "Bash(git commit -m 'Add self-registration with admin approval *)"
+      "Bash(git commit -m 'Add self-registration with admin approval *)",
+      "Bash(git commit --amend -m 'Add per-device submission limit for live one-time voting *)"
     ]
   }
 }
