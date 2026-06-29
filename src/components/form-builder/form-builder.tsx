@@ -78,6 +78,7 @@ import { AddFieldButton } from "./add-field-button"
 import { FieldItem } from "./field-item"
 import { FieldEditorPanel } from "./field-editor-panel"
 import { FormPreview } from "./form-preview"
+import { ThankYouDesigner } from "./thank-you-designer"
 import { createForm, updateForm } from "@/lib/actions/forms"
 import {
   buildAttendanceFields,
@@ -89,6 +90,7 @@ import {
   type Form,
   type FormDataset,
   type FormType,
+  type ThankYouRecapBlock,
 } from "@/lib/types"
 import { DatasetEditor } from "./dataset-editor"
 import { AiChatPanel } from "./ai-chat-panel"
@@ -126,6 +128,17 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const [afterSubmit, setAfterSubmit] = useState<"thank_you" | "redirect">(
     initialForm?.settings?.after_submit ?? "thank_you"
   )
+  const [submitMessage, setSubmitMessage] = useState(
+    initialForm?.settings?.submit_message ?? ""
+  )
+  const [thankYouMessage, setThankYouMessage] = useState(
+    initialForm?.settings?.thank_you_message ?? ""
+  )
+  const [thankYouRecaps, setThankYouRecaps] = useState<ThankYouRecapBlock[]>(
+    initialForm?.settings?.thank_you_recaps ?? []
+  )
+  // Which page of the builder is being designed (the form vs the thank-you page)
+  const [activePage, setActivePage] = useState<"form" | "thankyou">("form")
   const [redirectUrl, setRedirectUrl] = useState(
     initialForm?.settings?.redirect_url ?? ""
   )
@@ -192,6 +205,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       formType: initialForm?.form_type ?? "general",
       submitLabel: initialForm?.settings?.submit_label ?? "",
       afterSubmit: initialForm?.settings?.after_submit ?? "thank_you",
+      submitMessage: initialForm?.settings?.submit_message ?? "",
+      thankYouMessage: initialForm?.settings?.thank_you_message ?? "",
+      thankYouRecaps: initialForm?.settings?.thank_you_recaps ?? [],
       redirectUrl: initialForm?.settings?.redirect_url ?? "",
       titleAlign: initialForm?.settings?.title_align ?? "right",
       hideBranding: initialForm?.settings?.hide_branding ?? false,
@@ -209,12 +225,12 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const isDirty = useMemo(() => {
     const current = JSON.stringify({
       name, description, fields, formType, submitLabel,
-      afterSubmit, redirectUrl, titleAlign, hideBranding,
+      afterSubmit, submitMessage, thankYouMessage, thankYouRecaps, redirectUrl, titleAlign, hideBranding,
       submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
       submissionStartDate, submissionEndDate, redirectParams, customCss,
     })
     return current !== savedSnapshotRef.current
-  }, [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, customCss])
+  }, [name, description, fields, formType, submitLabel, afterSubmit, submitMessage, thankYouMessage, thankYouRecaps, redirectUrl, titleAlign, hideBranding, submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, customCss])
 
   useUnsavedChanges(isDirty)
 
@@ -403,7 +419,14 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           form_type: formType,
           settings: {
             submit_message:
-              formType === "attendance" ? "הדיווח נקלט בהצלחה!" : "תודה על תגובתך!",
+              submitMessage.trim() ||
+              (formType === "attendance" ? "הדיווח נקלט בהצלחה!" : "תודה על תגובתך!"),
+            ...(afterSubmit === "thank_you" && thankYouMessage.trim()
+              ? { thank_you_message: thankYouMessage.trim() }
+              : {}),
+            ...(afterSubmit === "thank_you" && thankYouRecaps.length > 0
+              ? { thank_you_recaps: thankYouRecaps.filter((r) => r.source_field_id && r.column_ids.length > 0) }
+              : {}),
             submit_label: submitLabel.trim() || undefined,
             after_submit: afterSubmit,
             redirect_url: afterSubmit === "redirect" ? redirectUrl.trim() || undefined : undefined,
@@ -486,7 +509,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         setPublishing(false)
       }
     },
-    [name, description, fields, formType, submitLabel, afterSubmit, redirectUrl, titleAlign, hideBranding, submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, customCss, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
+    [name, description, fields, formType, submitLabel, afterSubmit, submitMessage, thankYouMessage, thankYouRecaps, redirectUrl, titleAlign, hideBranding, submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, customCss, approvalSteps, approvalVisMode, getFieldOptions, datasets, isEditing, initialForm, router]
   )
 
   return (
@@ -922,6 +945,20 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                         הפנייה ל-URL
                       </button>
                     </div>
+
+                    {afterSubmit === "thank_you" && (
+                      <button
+                        type="button"
+                        onClick={() => setActivePage("thankyou")}
+                        className="w-full mt-1 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-right transition-colors hover:bg-orange-100"
+                      >
+                        <span className="block text-xs font-medium text-orange-700">עצב את עמוד התודה ←</span>
+                        <span className="block text-[10px] text-orange-600/80 mt-0.5">
+                          כותרת, טקסט עם ערכים מהטופס, וסיכום פריטים מהמאגר
+                        </span>
+                      </button>
+                    )}
+
                     {afterSubmit === "redirect" && (
                       <div className="space-y-3 mt-1">
                         <Input
@@ -1345,19 +1382,65 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           </div>
 
           {/* ── Col 2: Live preview — CENTER (40%) — restore RTL inside ── */}
-          <div className="flex-[4] min-w-0 overflow-hidden border-e border-neutral-200" style={{ direction: "rtl" }}>
-            <FormPreview
-              name={name}
-              description={description}
-              titleAlign={titleAlign}
-              fields={fields}
-              submitLabel={
-                submitLabel.trim() || (formType === "attendance" ? "שלח דיווח" : "שלח")
-              }
-              customCss={customCss}
-              selectedFieldId={selectedField?.id ?? null}
-              onSelectField={selectField}
-            />
+          <div className="flex-[4] min-w-0 overflow-hidden border-e border-neutral-200 flex flex-col" style={{ direction: "rtl" }}>
+            {/* Page switcher: form page vs thank-you page */}
+            <div className="shrink-0 flex items-center justify-center gap-1 border-b border-neutral-200 bg-white px-3 py-2">
+              <div className="inline-flex rounded-xl bg-neutral-100 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setActivePage("form")}
+                  className={`rounded-lg px-4 py-1.5 transition-colors ${
+                    activePage === "form"
+                      ? "bg-white shadow-sm font-medium text-neutral-900"
+                      : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  דף הטופס
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePage("thankyou")}
+                  className={`rounded-lg px-4 py-1.5 transition-colors ${
+                    activePage === "thankyou"
+                      ? "bg-white shadow-sm font-medium text-neutral-900"
+                      : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  דף תודה
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {activePage === "form" ? (
+                <FormPreview
+                  name={name}
+                  description={description}
+                  titleAlign={titleAlign}
+                  fields={fields}
+                  submitLabel={
+                    submitLabel.trim() || (formType === "attendance" ? "שלח דיווח" : "שלח")
+                  }
+                  customCss={customCss}
+                  selectedFieldId={selectedField?.id ?? null}
+                  onSelectField={selectField}
+                />
+              ) : (
+                <ThankYouDesigner
+                  submitMessage={submitMessage}
+                  onSubmitMessageChange={setSubmitMessage}
+                  thankYouMessage={thankYouMessage}
+                  onThankYouMessageChange={setThankYouMessage}
+                  recaps={thankYouRecaps}
+                  onRecapsChange={setThankYouRecaps}
+                  fields={fields}
+                  datasets={datasets}
+                  formType={formType}
+                  afterSubmit={afterSubmit}
+                  onEnableThankYou={() => setAfterSubmit("thank_you")}
+                />
+              )}
+            </div>
           </div>
 
           {/* ── Col 1: Field list — RIGHT (30%) ── */}
@@ -1459,6 +1542,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         onSettingsUpdate={(u) => {
           if (u.form_type !== undefined) setFormType(u.form_type)
           if (u.submit_label !== undefined) setSubmitLabel(u.submit_label)
+          if (u.submit_message !== undefined) setSubmitMessage(u.submit_message)
+          if (u.thank_you_message !== undefined) setThankYouMessage(u.thank_you_message)
           if (u.after_submit !== undefined) setAfterSubmit(u.after_submit)
           if (u.redirect_url !== undefined) setRedirectUrl(u.redirect_url)
           if (u.redirect_params !== undefined) setRedirectParams(u.redirect_params)

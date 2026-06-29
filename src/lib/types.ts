@@ -143,8 +143,24 @@ export interface ApprovalFieldVisibility {
   visible_field_ids?: string[]
 }
 
+// ─── Thank-you page recap block ───────────────────────────────────────────────
+// Re-resolves a dataset-backed selection (the form stores only the chosen label)
+// back to its dataset row(s) and shows chosen columns — e.g. "here are the items
+// you picked, arriving soon". Lets the thank-you page show more than the label.
+
+export interface ThankYouRecapBlock {
+  id: string
+  title?: string             // optional heading above the list, e.g. "הפריטים שבחרת"
+  source_field_id: string    // a dataset-backed selection field; its picks are resolved
+  column_ids: string[]       // which dataset columns to display per item
+  layout?: "list" | "table"  // default "list"
+  footer?: string            // optional note below, e.g. "הפריטים יגיעו בקרוב"
+}
+
 export interface FormSettings {
-  submit_message?: string
+  submit_message?: string         // thank-you page heading (supports {{תווית שדה}} variables)
+  thank_you_message?: string      // thank-you page body text (supports {{תווית שדה}} variables + markdown)
+  thank_you_recaps?: ThankYouRecapBlock[]  // dataset item-recap blocks shown on the thank-you page
   submit_label?: string           // text on the submit button (default: "שלח")
   after_submit?: "thank_you" | "redirect"  // what happens after form is submitted
   redirect_url?: string           // used when after_submit === "redirect"

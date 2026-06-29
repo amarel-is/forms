@@ -170,6 +170,7 @@ const FormGenerationSchema = z.object({
   form_type: z.enum(["general", "attendance", "approval"]),
   submit_label: z.string().nullable(),
   submit_message: z.string().nullable(),
+  thank_you_message: z.string().nullable(),
   after_submit: z.enum(["thank_you", "redirect"]).nullable(),
   redirect_url: z.string().nullable(),
   redirect_params: z.array(z.object({ field_key: z.string(), param_name: z.string() })).nullable(),
@@ -289,6 +290,8 @@ SUBMISSION CONTROLS
 - hide_branding: true to hide the Amarel powered-by footer.
 - after_submit="redirect" + redirect_url: external redirect after submit, otherwise "thank_you".
 - redirect_params: array of { field_key, param_name } — append submitted field values as query params to the redirect URL.
+- submit_message: the thank-you page heading. thank_you_message: the thank-you page body (markdown supported). Both can embed the submitter's own answers with {{תווית שדה}} placeholders matching a field's exact label — e.g. "היי {{שם מלא}}, נתראה ב-{{מיקום האירוע}}!". Use this when the user wants a personalized confirmation screen.
+- The thank-you page can ALSO show a "dataset recap" — a list of the dataset items the user selected, with extra columns (not just the label). That block is configured visually in the builder's "דף תודה" tab (not via these tools); if the user asks for it, set up a dataset-backed selection field and point them there.
 
 DESIGN GUIDELINES
 - Long forms → break with section + subheading + paragraph (info) for instructions.
@@ -523,6 +526,7 @@ export async function generateFormWithAI(
       after_submit: parsed.after_submit ?? "thank_you",
     }
     if (parsed.submit_message) settings.submit_message = parsed.submit_message
+    if (parsed.thank_you_message) settings.thank_you_message = parsed.thank_you_message
     if (parsed.after_submit === "redirect" && parsed.redirect_url) {
       settings.redirect_url = parsed.redirect_url
       if (parsed.redirect_params?.length) {
@@ -669,6 +673,7 @@ const UpdateFormSettingsParams = z.object({
   form_type: z.enum(["general", "attendance", "approval"]).nullable(),
   submit_label: z.string().nullable(),
   submit_message: z.string().nullable(),
+  thank_you_message: z.string().nullable(),
   after_submit: z.enum(["thank_you", "redirect"]).nullable(),
   redirect_url: z.string().nullable(),
   redirect_params: z.array(z.object({ field_id: z.string(), param_name: z.string() })).nullable(),
@@ -705,7 +710,7 @@ Field-level tools:
 - reorder_field: Move a field.
 
 Form-level tools:
-- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits, submission date window, custom_css). Only pass the fields you want to change; leave the rest null. Submission limiting has two modes via submission_limit_mode: "field" (default — cap per unique value of submission_limit_field_id, e.g. one per ת.ז.) or "device" (one submission per device with NO ID field — use this for live voting / "כל אחד מצביע פעם אחת" without asking for identifying details). For submission_limit_field_id use the exact id of an existing field from the context below.
+- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits, submission date window, custom_css). Only pass the fields you want to change; leave the rest null. submit_message is the thank-you page heading and thank_you_message is its body (markdown ok); both can personalize the screen by embedding the submitter's answers with {{תווית שדה}} placeholders that match a field's exact label (e.g. "היי {{שם מלא}}, נתראה ב-{{מיקום}}"). The thank-you page can also show a recap list of selected dataset items with extra columns — that block is configured visually in the "דף תודה" tab, not via this tool. Submission limiting has two modes via submission_limit_mode: "field" (default — cap per unique value of submission_limit_field_id, e.g. one per ת.ז.) or "device" (one submission per device with NO ID field — use this for live voting / "כל אחד מצביע פעם אחת" without asking for identifying details). For submission_limit_field_id use the exact id of an existing field from the context below.
 
 ${CUSTOM_CSS_DOC}
 - set_approval_workflow: Replace the entire approval workflow. Set enabled=true and provide the ordered list of steps. Each step has approver_name (Hebrew), channel ("email"|"whatsapp"), and source_type: "fixed" (target = email/phone), "from_field" (source_field_key = existing field id), or "from_option_map" (source_field_key + target_by_value array). To clear the workflow pass enabled=false with steps=[].
@@ -734,6 +739,7 @@ export interface ChatSettingsUpdate {
   form_type?: FormType
   submit_label?: string
   submit_message?: string
+  thank_you_message?: string
   after_submit?: "thank_you" | "redirect"
   redirect_url?: string
   redirect_params?: Array<{ field_id: string; param_name: string }>
@@ -853,6 +859,7 @@ function applyToolCalls(
         if (parsed.form_type !== null) { settings.form_type = parsed.form_type; changed.push("סוג טופס") }
         if (parsed.submit_label !== null) { settings.submit_label = parsed.submit_label; changed.push("כפתור שליחה") }
         if (parsed.submit_message !== null) { settings.submit_message = parsed.submit_message; changed.push("הודעת הצלחה") }
+        if (parsed.thank_you_message !== null) { settings.thank_you_message = parsed.thank_you_message; changed.push("עמוד תודה") }
         if (parsed.after_submit !== null) { settings.after_submit = parsed.after_submit; changed.push("לאחר הגשה") }
         if (parsed.redirect_url !== null) { settings.redirect_url = parsed.redirect_url; changed.push("כתובת הפניה") }
         if (parsed.redirect_params !== null) { settings.redirect_params = parsed.redirect_params ?? undefined; changed.push("פרמטרי הפניה") }

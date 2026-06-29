@@ -31,7 +31,7 @@ import { submitResponse } from "@/lib/actions/responses"
 import { getDeviceFingerprint, hasVotedLocally, markVotedLocally } from "@/lib/device-id"
 import ReactMarkdown from "react-markdown"
 import { computeAIField } from "@/lib/actions/ai"
-import { isLayoutField, type FieldConfig, type Form, type FormDataset } from "@/lib/types"
+import { isLayoutField, type FieldConfig, type Form, type FormDataset, type ThankYouRecapBlock, type DatasetColumn, type DatasetRow } from "@/lib/types"
 import { validateTextValue } from "@/lib/field-validation"
 import { isFieldVisibleWithSections } from "@/lib/conditions"
 
@@ -57,6 +57,126 @@ function readMemory(formId: string): FormMemory | null {
 function hasActiveMemory(formId: string): boolean {
   const m = readMemory(formId)
   return !!m && m.savedFieldIds.length > 0
+}
+
+// ─── Thank-you template interpolation ─────────────────────────────────────────
+// Replaces {{תווית שדה}} placeholders with the submitted value for that field.
+// Matches the {{label}} convention used by AI-computed fields.
+
+function interpolateTemplate(
+  template: string,
+  values: FormValues,
+  fields: FieldConfig[]
+): string {
+  let out = template
+  for (const f of fields) {
+    if (isLayoutField(f.type) || !f.label) continue
+    const raw = values[f.id]
+    const display = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "")
+    out = out.replaceAll(`{{${f.label}}}`, display)
+  }
+  // Drop any leftover unmatched placeholders so users never see raw {{...}}.
+  return out.replace(/\{\{[^}]*\}\}/g, "")
+}
+
+// ─── Thank-you dataset recap block ────────────────────────────────────────────
+// The form stores only the chosen label, so we re-resolve each selected value
+// back to its dataset row and render the configured columns.
+
+function ThankYouRecap({
+  block,
+  values,
+  fields,
+  datasets,
+}: {
+  block: ThankYouRecapBlock
+  values: FormValues
+  fields: FieldConfig[]
+  datasets?: FormDataset[]
+}) {
+  const field = fields.find((f) => f.id === block.source_field_id)
+  const ds = datasets?.find((d) => d.id === field?.data_source?.dataset_id)
+  if (!field || !ds || block.column_ids.length === 0) return null
+
+  const raw = values[block.source_field_id]
+  const selected = Array.isArray(raw) ? raw : raw ? [String(raw)] : []
+  if (selected.length === 0) return null
+
+  const labelCol = field.data_source?.label_column
+  const rows = selected
+    .map((sel) =>
+      ds.rows.find((r) =>
+        labelCol
+          ? String(r[labelCol] ?? "") === sel
+          : ds.columns.some((c) => String(r[c.id] ?? "") === sel)
+      )
+    )
+    .filter((r): r is DatasetRow => !!r)
+  if (rows.length === 0) return null
+
+  const cols = block.column_ids
+    .map((id) => ds.columns.find((c) => c.id === id))
+    .filter((c): c is DatasetColumn => !!c)
+  if (cols.length === 0) return null
+
+  const cell = (row: DatasetRow, col: DatasetColumn) => {
+    const v = String(row[col.id] ?? "")
+    if (!v) return <span className="text-neutral-300">—</span>
+    if (col.type === "image") {
+      return <img src={v} alt="" className="h-12 w-12 rounded-lg object-cover border border-neutral-200" />
+    }
+    return <span>{v}</span>
+  }
+
+  return (
+    <div dir="rtl" className="w-full max-w-md mx-auto text-right mt-6">
+      {block.title && (
+        <h3 className="text-base font-semibold text-neutral-800 mb-2">{block.title}</h3>
+      )}
+
+      {block.layout === "table" ? (
+        <div className="overflow-hidden rounded-xl border border-neutral-200">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50">
+              <tr>
+                {cols.map((c) => (
+                  <th key={c.id} className="px-3 py-2 text-right font-medium text-neutral-500">{c.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i} className="border-t border-neutral-100">
+                  {cols.map((c) => (
+                    <td key={c.id} className="px-3 py-2 text-neutral-800">{cell(row, c)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((row, i) => (
+            <li key={i} className="rounded-xl border border-neutral-200 bg-white px-4 py-3 flex items-center gap-3">
+              {cols.map((c) => (
+                <div key={c.id} className={c.type === "image" ? "shrink-0" : "flex-1 min-w-0"}>
+                  {cols.length > 1 && c.type !== "image" && (
+                    <span className="block text-[11px] text-neutral-400">{c.name}</span>
+                  )}
+                  <span className="text-sm font-medium text-neutral-800">{cell(row, c)}</span>
+                </div>
+              ))}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {block.footer && (
+        <p className="text-sm text-neutral-500 mt-2">{block.footer}</p>
+      )}
+    </div>
+  )
 }
 
 // ─── AI Computed Field element ────────────────────────────────────────────────
@@ -440,6 +560,16 @@ export function FormRenderer({ form }: FormRendererProps) {
     )?.[1] as string | undefined
     const isEntry = direction === "כניסה"
 
+    const heading = interpolateTemplate(
+      form.settings?.submit_message ?? "תודה!",
+      values,
+      form.fields
+    ).trim() || "תודה!"
+
+    const customBody = form.settings?.thank_you_message?.trim()
+      ? interpolateTemplate(form.settings.thank_you_message, values, form.fields).trim()
+      : ""
+
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <div
@@ -454,22 +584,41 @@ export function FormRenderer({ form }: FormRendererProps) {
           />
         </div>
         <h2 className="text-2xl font-bold text-neutral-900 mb-2">
-          {form.settings?.submit_message ?? "תודה!"}
+          {heading}
         </h2>
-        <div className="flex items-center gap-2 text-base text-neutral-500">
-          {direction && (
-            isEntry
-              ? <LogIn className="h-5 w-5 text-green-500 shrink-0" />
-              : <LogOut className="h-5 w-5 text-red-500 shrink-0" />
-          )}
-          <span>
-            {direction
-              ? isEntry
-                ? "כניסתך נרשמה בהצלחה."
-                : "יציאתך נרשמה בהצלחה."
-              : "תגובתך נקלטה בהצלחה."}
-          </span>
-        </div>
+        {customBody ? (
+          <div
+            dir="rtl"
+            className="text-base text-neutral-600 leading-relaxed max-w-md [&_p]:my-1 [&_ul]:list-disc [&_ul]:pr-5 [&_ol]:list-decimal [&_ol]:pr-5 [&_strong]:font-semibold [&_em]:italic [&_a]:text-blue-600 [&_a]:underline"
+          >
+            <ReactMarkdown>{customBody}</ReactMarkdown>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-base text-neutral-500">
+            {direction && (
+              isEntry
+                ? <LogIn className="h-5 w-5 text-green-500 shrink-0" />
+                : <LogOut className="h-5 w-5 text-red-500 shrink-0" />
+            )}
+            <span>
+              {direction
+                ? isEntry
+                  ? "כניסתך נרשמה בהצלחה."
+                  : "יציאתך נרשמה בהצלחה."
+                : "תגובתך נקלטה בהצלחה."}
+            </span>
+          </div>
+        )}
+
+        {(form.settings?.thank_you_recaps ?? []).map((block) => (
+          <ThankYouRecap
+            key={block.id}
+            block={block}
+            values={values}
+            fields={form.fields}
+            datasets={datasets}
+          />
+        ))}
       </div>
     )
   }
