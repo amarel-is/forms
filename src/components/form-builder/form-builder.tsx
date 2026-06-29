@@ -308,6 +308,25 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     }
   }
 
+  function duplicateField(id: string) {
+    const original = fields.find((f) => f.id === id)
+    if (!original) return
+    // Deep clone (FieldConfig is JSON-serializable) so nested options/conditions
+    // don't stay shared between the original and the copy.
+    const copy: FieldConfig = JSON.parse(JSON.stringify(original))
+    copy.id = nanoid()
+    if (!isLayoutField(copy.type) && copy.label) {
+      copy.label = `${copy.label} (עותק)`
+    }
+    setFields((prev) => {
+      const idx = prev.findIndex((f) => f.id === id)
+      const next = [...prev]
+      next.splice(idx + 1, 0, copy)
+      return next
+    })
+    selectField(copy.id)
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (over && active.id !== over.id) {
@@ -1472,6 +1491,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                         isSelected={selectedField?.id === field.id}
                         onSelect={() => selectField(field.id)}
                         onDelete={() => deleteField(field.id)}
+                        onDuplicate={() => duplicateField(field.id)}
                       />
                     ))}
                   </SortableContext>

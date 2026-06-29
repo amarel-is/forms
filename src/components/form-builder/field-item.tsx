@@ -25,6 +25,7 @@ import {
   Layers,
   Search,
   Sparkles,
+  Copy,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { isLayoutField, type FieldConfig } from "@/lib/types"
@@ -82,9 +83,10 @@ interface FieldItemProps {
   isSelected: boolean
   onSelect: () => void
   onDelete: () => void
+  onDuplicate: () => void
 }
 
-export function FieldItem({ field, isSelected, onSelect, onDelete }: FieldItemProps) {
+export function FieldItem({ field, isSelected, onSelect, onDelete, onDuplicate }: FieldItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: field.id })
 
@@ -170,12 +172,25 @@ export function FieldItem({ field, isSelected, onSelect, onDelete }: FieldItemPr
         </Badge>
       )}
 
+      {/* Duplicate */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onDuplicate()
+        }}
+        title="שכפל שדה"
+        className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-neutral-600 transition-all"
+      >
+        <Copy className="h-3.5 w-3.5" />
+      </button>
+
       {/* Delete */}
       <button
         onClick={(e) => {
           e.stopPropagation()
           onDelete()
         }}
+        title="מחק שדה"
         className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all"
       >
         <Trash2 className="h-3.5 w-3.5" />
