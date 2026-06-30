@@ -3,7 +3,7 @@
 import { getAuthContext } from "@/lib/supabase/auth-context"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { buildWebhookEnrichment } from "@/lib/webhook-enrich"
-import { rowToForm } from "@/lib/types"
+import { rowToForm, isLayoutField, type FieldConfig } from "@/lib/types"
 import crypto from "crypto"
 
 export interface FormWebhook {
@@ -325,10 +325,63 @@ export async function listFormsForWebhookResend(): Promise<{
   return { forms: out }
 }
 
+export interface ResendResponseItem {
+  id: string
+  label: string
+  submitted_at: string
+  delivered: boolean
+}
+
+// Per-response list for the cherry-pick picker (superadmin, any form).
+export async function listFormResponsesForResend(formId: string): Promise<{
+  responses: ResendResponseItem[]
+  error?: string
+}> {
+  const { user, isSuperadmin, db } = await getAuthContext()
+  if (!user) return { responses: [], error: "Unauthorized" }
+  if (!isSuperadmin) return { responses: [], error: "פעולה זו זמינה לסופר אדמין בלבד." }
+
+  const { data: formRow } = await db.from("forms").select("fields").eq("id", formId).single()
+  const fields = ((formRow?.fields ?? []) as FieldConfig[]) || []
+  // Best-effort display label: a "name" field, else the first labelled input field.
+  const nameField =
+    fields.find((f) => f.type === "text" && (f.label || "").includes("שם")) ??
+    fields.find((f) => !isLayoutField(f.type) && !!f.label)
+
+  const { data: rows, error } = await db
+    .from("responses")
+    .select("id, data, submitted_at")
+    .eq("form_id", formId)
+    .order("submitted_at", { ascending: false })
+    .limit(1000)
+  if (error) return { responses: [], error: error.message }
+
+  // Which responses already have a delivered (2xx) webhook log
+  const { data: logs } = await db
+    .from("webhook_logs")
+    .select("payload, status_code")
+    .eq("form_id", formId)
+  const delivered = new Set<string>()
+  for (const l of (logs ?? []) as { payload: { data?: { response_id?: string } }; status_code: number | null }[]) {
+    const rid = l.payload?.data?.response_id
+    if (rid && l.status_code != null && l.status_code >= 200 && l.status_code < 300) delivered.add(rid)
+  }
+
+  const responses: ResendResponseItem[] = (
+    (rows ?? []) as { id: string; data: Record<string, string | string[]>; submitted_at: string }[]
+  ).map((r) => {
+    const raw = nameField ? (r.data ?? {})[nameField.id] : ""
+    const label = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "")
+    return { id: r.id, label: label.trim(), submitted_at: r.submitted_at, delivered: delivered.has(r.id) }
+  })
+  return { responses }
+}
+
 export async function resendFormResponsesToWebhooks(
   formId: string,
-  mode: "all" | "last",
-  count = 1
+  mode: "all" | "last" | "selected",
+  count = 1,
+  responseIds?: string[]
 ): Promise<{ sent: number; failed: number; total: number; webhooks: number; error?: string }> {
   const { user, isSuperadmin, db } = await getAuthContext()
   if (!user) return { sent: 0, failed: 0, total: 0, webhooks: 0, error: "Unauthorized" }
@@ -363,7 +416,14 @@ export async function resendFormResponsesToWebhooks(
     .select("id, data, submitted_at")
     .eq("form_id", formId)
     .order("submitted_at", { ascending: false })
-  if (mode === "last") query = query.limit(Math.max(1, Math.min(count, 1000)))
+  if (mode === "selected") {
+    const ids = (responseIds ?? []).slice(0, 1000)
+    if (ids.length === 0)
+      return { sent: 0, failed: 0, total: 0, webhooks: 0, error: "לא נבחרו תגובות." }
+    query = query.in("id", ids)
+  } else if (mode === "last") {
+    query = query.limit(Math.max(1, Math.min(count, 1000)))
+  }
   const { data: respRows, error: respErr } = await query
   if (respErr) return { sent: 0, failed: 0, total: 0, webhooks: 0, error: respErr.message }
 
