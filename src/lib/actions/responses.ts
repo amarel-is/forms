@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server"
 import { getAuthContext } from "@/lib/supabase/auth-context"
 import { initializeApprovalForResponse } from "@/lib/actions/approvals"
 import { fireWebhooks } from "@/lib/actions/webhooks"
-import { rowToResponse, type FormResponse } from "@/lib/types"
+import { buildWebhookEnrichment } from "@/lib/webhook-enrich"
+import { rowToForm, rowToResponse, type FormResponse } from "@/lib/types"
 
 export async function submitResponse(
   formId: string,
@@ -50,10 +51,27 @@ export async function submitResponse(
   }
 
   if (responseId) {
+    // Resolve human-readable answers + dataset-backed values (e.g. WhatsApp
+    // links) so external consumers get everything without their own lookups.
+    let enrichment: ReturnType<typeof buildWebhookEnrichment> = { answers: {}, resolved: {} }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: formRow } = await (supabase as any)
+        .from("forms")
+        .select("fields, settings, schema")
+        .eq("id", formId)
+        .single()
+      if (formRow) enrichment = buildWebhookEnrichment(rowToForm(formRow), data)
+    } catch {
+      // enrichment is best-effort — never block the submission
+    }
+
     // Fire response_submitted webhooks (non-blocking)
     fireWebhooks(formId, "response_submitted", {
       response_id: responseId,
       response_data: data,
+      answers: enrichment.answers,
+      resolved: enrichment.resolved,
     }).catch(() => {})
 
     const result = await initializeApprovalForResponse(responseId)
