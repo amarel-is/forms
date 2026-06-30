@@ -53,7 +53,8 @@
       "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited'\\), 8000\\)\")",
       "Bash(env)",
       "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 15s'\\), 15000\\)\")",
-      "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 25s'\\), 25000\\)\")"
+      "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 25s'\\), 25000\\)\")",
+      "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 20s'\\), 20000\\)\")"
     ]
   }
 }
