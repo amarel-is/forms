@@ -95,7 +95,9 @@ function ThankYouRecap({
   datasets?: FormDataset[]
 }) {
   const field = fields.find((f) => f.id === block.source_field_id)
-  const ds = datasets?.find((d) => d.id === field?.data_source?.dataset_id)
+  // Accept dataset_id directly on the block when the field has no data_source
+  const dsId = field?.data_source?.dataset_id ?? block.dataset_id
+  const ds = datasets?.find((d) => d.id === dsId)
   if (!field || !ds || block.column_ids.length === 0) return null
 
   const raw = values[block.source_field_id]
@@ -104,13 +106,14 @@ function ThankYouRecap({
 
   const labelCol = field.data_source?.label_column
   const rows = selected
-    .map((sel) =>
-      ds.rows.find((r) =>
+    .map((sel) => {
+      const selT = sel.trim()
+      return ds.rows.find((r) =>
         labelCol
-          ? String(r[labelCol] ?? "") === sel
-          : ds.columns.some((c) => String(r[c.id] ?? "") === sel)
+          ? (() => { const rv = String(r[labelCol] ?? "").trim(); return rv === selT || selT.includes(rv) })()
+          : ds.columns.some((c) => { const rv = String(r[c.id] ?? "").trim(); return rv === selT || selT.includes(rv) })
       )
-    )
+    })
     .filter((r): r is DatasetRow => !!r)
   if (rows.length === 0) return null
 
@@ -120,10 +123,22 @@ function ThankYouRecap({
   if (cols.length === 0) return null
 
   const cell = (row: DatasetRow, col: DatasetColumn) => {
-    const v = String(row[col.id] ?? "")
+    const v = String(row[col.id] ?? "").trim()
     if (!v) return <span className="text-neutral-300">—</span>
     if (col.type === "image") {
       return <img src={v} alt="" className="h-12 w-12 rounded-lg object-cover border border-neutral-200" />
+    }
+    if (v.startsWith("http")) {
+      return (
+        <a
+          href={v}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-green-600 font-semibold underline underline-offset-2 hover:text-green-700"
+        >
+          לחצו להצטרפות לקבוצת WhatsApp ↗
+        </a>
+      )
     }
     return <span>{v}</span>
   }

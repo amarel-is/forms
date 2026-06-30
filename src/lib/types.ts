@@ -152,6 +152,7 @@ export interface ThankYouRecapBlock {
   id: string
   title?: string             // optional heading above the list, e.g. "הפריטים שבחרת"
   source_field_id: string    // a dataset-backed selection field; its picks are resolved
+  dataset_id?: string        // direct dataset override — used when the field has no data_source
   column_ids: string[]       // which dataset columns to display per item
   layout?: "list" | "table"  // default "list"
   footer?: string            // optional note below, e.g. "הפריטים יגיעו בקרוב"
