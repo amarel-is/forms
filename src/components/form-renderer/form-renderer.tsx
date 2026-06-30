@@ -771,31 +771,45 @@ function DatasetLookupElement({
   const ds = datasets.find((d) => d.id === datasetId)
   if (!ds) return null
 
-  const labelVal = Array.isArray(selectedValue) ? selectedValue[0] : selectedValue
+  const labelVal = String(Array.isArray(selectedValue) ? selectedValue[0] : selectedValue).trim()
 
-  // Match the dataset row by any column containing the selected value
+  // Match the dataset row by any column whose value matches the selection.
+  // Tolerates the "⭐ " option prefix and stray whitespace in dataset cells.
   const row = ds.rows.find((r) =>
-    ds.columns.some((c) => String(r[c.id] ?? "") === labelVal)
+    ds.columns.some((c) => {
+      const cell = String(r[c.id] ?? "").trim()
+      return !!cell && (cell === labelVal || labelVal.includes(cell))
+    })
   )
 
   if (!row) return null
 
-  const displayValue = String(row[columnId] ?? "")
+  const displayValue = String(row[columnId] ?? "").trim()
   if (!displayValue) return null
 
   const displayCol = ds.columns.find((c) => c.id === columnId)
   const isImage = displayCol?.type === "image"
+  const isLink = displayValue.startsWith("http")
 
   return (
-    <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-cyan-800">
+    <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-green-800">
           {field.label || displayCol?.name || "תצוגת מאגר"}
         </span>
         {isImage ? (
-          <img src={displayValue} alt={field.label || ""} className="h-16 w-16 rounded-lg object-cover border border-cyan-200" />
+          <img src={displayValue} alt={field.label || ""} className="h-16 w-16 rounded-lg object-cover border border-green-200" />
+        ) : isLink ? (
+          <a
+            href={displayValue}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-[#25D366] px-3 py-1.5 text-sm font-bold text-white hover:bg-[#1ebe5b]"
+          >
+            הצטרפות לקבוצת WhatsApp ↗
+          </a>
         ) : (
-          <span className="text-sm font-bold text-cyan-900">
+          <span className="text-sm font-bold text-green-900">
             {displayValue}
           </span>
         )}
