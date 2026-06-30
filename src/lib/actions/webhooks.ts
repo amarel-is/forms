@@ -1,6 +1,9 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getAuthContext } from "@/lib/supabase/auth-context"
+import { buildWebhookEnrichment } from "@/lib/webhook-enrich"
+import { rowToForm } from "@/lib/types"
 import crypto from "crypto"
 
 export interface FormWebhook {
@@ -249,4 +252,171 @@ export async function testWebhook(webhookId: string): Promise<{
 
   if (errorMsg) return { success: false, error: errorMsg }
   return { success: statusCode !== null && statusCode >= 200 && statusCode < 300, statusCode: statusCode ?? undefined }
+}
+
+// ─── Superadmin: replay existing responses to a form's webhooks ───────────────
+// Lets a superadmin re-send past submissions to the active webhooks of ANY form
+// (e.g. after a webhook was recreated). Uses the admin client throughout so it
+// works regardless of form ownership / RLS.
+
+export interface ResendFormOption {
+  id: string
+  name: string
+  owner_email: string | null
+  response_count: number
+  webhook_count: number
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+export async function listFormsForWebhookResend(): Promise<{
+  forms: ResendFormOption[]
+  error?: string
+}> {
+  const { user, isSuperadmin, db } = await getAuthContext()
+  if (!user) return { forms: [], error: "Unauthorized" }
+  if (!isSuperadmin) return { forms: [], error: "פעולה זו זמינה לסופר אדמין בלבד." }
+
+  // Only forms that have at least one active webhook are relevant for resend.
+  const { data: hooks, error: hooksErr } = await db
+    .from("form_webhooks")
+    .select("form_id, is_active")
+    .eq("is_active", true)
+  if (hooksErr) return { forms: [], error: hooksErr.message }
+
+  const counts = new Map<string, number>()
+  for (const h of (hooks ?? []) as { form_id: string }[]) {
+    counts.set(h.form_id, (counts.get(h.form_id) ?? 0) + 1)
+  }
+  const formIds = [...counts.keys()]
+  if (formIds.length === 0) return { forms: [] }
+
+  const { data: forms, error: formsErr } = await db
+    .from("forms")
+    .select("id, name, user_id")
+    .in("id", formIds)
+  if (formsErr) return { forms: [], error: formsErr.message }
+
+  const out: ResendFormOption[] = []
+  for (const f of (forms ?? []) as { id: string; name: string; user_id: string }[]) {
+    const { count } = await db
+      .from("responses")
+      .select("*", { count: "exact", head: true })
+      .eq("form_id", f.id)
+    let owner_email: string | null = null
+    try {
+      const { data: u } = await db.auth.admin.getUserById(f.user_id)
+      owner_email = u?.user?.email ?? null
+    } catch {
+      // ignore — email is informational only
+    }
+    out.push({
+      id: f.id,
+      name: f.name,
+      owner_email,
+      response_count: count ?? 0,
+      webhook_count: counts.get(f.id) ?? 0,
+    })
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name, "he"))
+  return { forms: out }
+}
+
+export async function resendFormResponsesToWebhooks(
+  formId: string,
+  mode: "all" | "last",
+  count = 1
+): Promise<{ sent: number; failed: number; total: number; webhooks: number; error?: string }> {
+  const { user, isSuperadmin, db } = await getAuthContext()
+  if (!user) return { sent: 0, failed: 0, total: 0, webhooks: 0, error: "Unauthorized" }
+  if (!isSuperadmin)
+    return { sent: 0, failed: 0, total: 0, webhooks: 0, error: "פעולה זו זמינה לסופר אדמין בלבד." }
+
+  // Active webhooks subscribed to response_submitted
+  const { data: webhooks } = await db
+    .from("form_webhooks")
+    .select("*")
+    .eq("form_id", formId)
+    .eq("is_active", true)
+  const activeHooks = ((webhooks ?? []) as FormWebhook[]).filter((w) =>
+    w.events.includes("response_submitted")
+  )
+  if (activeHooks.length === 0)
+    return { sent: 0, failed: 0, total: 0, webhooks: 0, error: "לא נמצא Webhook פעיל לטופס זה." }
+
+  // Form (for enrichment)
+  const { data: formRow } = await db
+    .from("forms")
+    .select("fields, settings, schema")
+    .eq("id", formId)
+    .single()
+  if (!formRow)
+    return { sent: 0, failed: 0, total: 0, webhooks: 0, error: "הטופס לא נמצא." }
+  const form = rowToForm(formRow)
+
+  // Responses (oldest→newest so replays arrive in original order)
+  let query = db
+    .from("responses")
+    .select("id, data, submitted_at")
+    .eq("form_id", formId)
+    .order("submitted_at", { ascending: false })
+  if (mode === "last") query = query.limit(Math.max(1, Math.min(count, 1000)))
+  const { data: respRows, error: respErr } = await query
+  if (respErr) return { sent: 0, failed: 0, total: 0, webhooks: 0, error: respErr.message }
+
+  const responses = ((respRows ?? []) as { id: string; data: Record<string, string | string[]>; submitted_at: string }[]).reverse()
+
+  let sent = 0
+  let failed = 0
+  for (const r of responses) {
+    const enrichment = buildWebhookEnrichment(form, r.data ?? {})
+    const fullPayload = {
+      event: "response_submitted",
+      form_id: formId,
+      timestamp: new Date().toISOString(),
+      data: {
+        response_id: r.id,
+        response_data: r.data ?? {},
+        answers: enrichment.answers,
+        resolved: enrichment.resolved,
+        resent: true,
+      },
+    }
+    const body = JSON.stringify(fullPayload)
+
+    for (const wh of activeHooks) {
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (wh.secret) headers["X-Webhook-Signature"] = signPayload(body, wh.secret)
+      let statusCode: number | null = null
+      let responseBody: string | null = null
+      let errorMsg: string | null = null
+      try {
+        const res = await fetch(wh.url, { method: "POST", headers, body, signal: AbortSignal.timeout(10000) })
+        statusCode = res.status
+        responseBody = (await res.text()).slice(0, 1000)
+      } catch (err) {
+        errorMsg = err instanceof Error ? err.message : "Unknown error"
+      }
+      if (errorMsg || statusCode === null || statusCode < 200 || statusCode >= 300) failed++
+      else sent++
+
+      try {
+        await db.from("webhook_logs").insert({
+          webhook_id: wh.id,
+          form_id: formId,
+          event: "response_submitted.resent",
+          payload: fullPayload,
+          status_code: statusCode,
+          response_body: responseBody,
+          error: errorMsg,
+        })
+      } catch {
+        // non-blocking
+      }
+    }
+    // gentle throttle so Make doesn't rate-limit on large replays
+    await sleep(120)
+  }
+
+  return { sent, failed, total: responses.length, webhooks: activeHooks.length }
 }
