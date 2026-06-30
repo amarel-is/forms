@@ -76,6 +76,22 @@ export function buildWebhookEnrichment(
     for (const col of ds.columns) {
       out[col.name] = normalize(String(row[col.id] ?? ""))
     }
+
+    // Exact secondary stop: a conditional field gated on this same primary
+    // selection field (e.g. "תחנת עלייה מדויקת — …"). Its id varies per
+    // primary point, so expose the chosen value under a stable `station` key.
+    const stationField = fields.find(
+      (f) =>
+        f.id !== block.source_field_id &&
+        (f.conditions?.rules ?? []).some((r) => r.fieldId === block.source_field_id) &&
+        responseData[f.id] !== undefined &&
+        responseData[f.id] !== "" &&
+        !Array.isArray(responseData[f.id])
+    )
+    if (stationField) {
+      out.station = normalize(String(responseData[stationField.id]))
+    }
+
     resolved[block.id] = out
   }
 
