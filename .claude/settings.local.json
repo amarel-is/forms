@@ -46,7 +46,14 @@
       "Bash(ls middleware.ts)",
       "Bash(find . -maxdepth 2 -name \"middleware.ts\" -not -path \"*/node_modules/*\")",
       "Bash(git commit -m 'Add self-registration with admin approval *)",
-      "Bash(git commit --amend -m 'Add per-device submission limit for live one-time voting *)"
+      "Bash(git commit --amend -m 'Add per-device submission limit for live one-time voting *)",
+      "Bash(cd \"C:/Users/Dolev.H/OneDrive - Amarel LTD/Documents/GitHub/forms\" && ls -la .env* 2>/dev/null; echo \"---\"; cat .mcp.json 2>/dev/null; echo \"---root mcp---\"; cat \"$HOME/.claude.json\" 2>/dev/null | head -c 0)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('mcpServers',{}\\), indent=2, ensure_ascii=False\\)[:2000]\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited'\\), 8000\\)\")",
+      "Bash(env)",
+      "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 15s'\\), 15000\\)\")",
+      "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 25s'\\), 25000\\)\")"
     ]
   }
 }
