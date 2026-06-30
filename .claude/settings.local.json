@@ -57,7 +57,9 @@
       "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 20s'\\), 20000\\)\")",
       "Bash(git rm *)",
       "Bash(node resend.mjs)",
-      "mcp__supabase__list_edge_functions"
+      "mcp__supabase__list_edge_functions",
+      "Bash(node_modules/.bin/eslint src/lib/actions/webhooks.ts src/app/admin/webhook-resend-panel.tsx)",
+      "Bash(echo \"---DONE EXIT:$?---\")"
     ]
   }
 }
