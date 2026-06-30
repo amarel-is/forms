@@ -1,7 +1,7 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
 import { getAuthContext } from "@/lib/supabase/auth-context"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { buildWebhookEnrichment } from "@/lib/webhook-enrich"
 import { rowToForm } from "@/lib/types"
 import crypto from "crypto"
@@ -33,9 +33,11 @@ export async function getFormWebhooks(formId: string): Promise<{
   webhooks: FormWebhook[]
   error?: string
 }> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  // Superadmin uses the service-role client → can manage any form's webhooks
+  // (org-wide oversight); regular users stay bound by RLS to their own forms.
+  const { user, db } = await getAuthContext()
+  if (!user) return { webhooks: [], error: "Unauthorized" }
+  const { data, error } = await db
     .from("form_webhooks")
     .select("*")
     .eq("form_id", formId)
@@ -53,9 +55,8 @@ export async function upsertWebhook(params: {
   is_active: boolean
   secret?: string | null
 }): Promise<{ webhook?: FormWebhook; error?: string }> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
+  const { user, db: sb } = await getAuthContext()
+  if (!user) return { error: "Unauthorized" }
 
   if (params.id) {
     const { data, error } = await sb
@@ -92,9 +93,9 @@ export async function upsertWebhook(params: {
 }
 
 export async function deleteWebhook(webhookId: string): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { user, db } = await getAuthContext()
+  if (!user) return { error: "Unauthorized" }
+  const { error } = await db
     .from("form_webhooks")
     .delete()
     .eq("id", webhookId)
@@ -107,9 +108,9 @@ export async function getWebhookLogs(formId: string, limit = 50): Promise<{
   logs: WebhookLog[]
   error?: string
 }> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { user, db } = await getAuthContext()
+  if (!user) return { logs: [], error: "Unauthorized" }
+  const { data, error } = await db
     .from("webhook_logs")
     .select("*")
     .eq("form_id", formId)
@@ -129,9 +130,12 @@ export async function fireWebhooks(
   event: string,
   payload: Record<string, unknown>
 ): Promise<void> {
-  const supabase = await createClient()
+  // System operation: triggered by a (possibly anonymous) public submission, so
+  // it must use the service-role client. The RLS SELECT policy on form_webhooks
+  // is owner-scoped (auth.uid()), which would return zero rows for an anonymous
+  // submitter and silently skip firing.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
+  const sb = createAdminClient() as any
 
   const { data: webhooks } = await sb
     .from("form_webhooks")
@@ -192,9 +196,8 @@ export async function testWebhook(webhookId: string): Promise<{
   statusCode?: number
   error?: string
 }> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
+  const { user, db: sb } = await getAuthContext()
+  if (!user) return { success: false, error: "Unauthorized" }
 
   const { data: webhook, error } = await sb
     .from("form_webhooks")
