@@ -56,7 +56,8 @@
       "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 25s'\\), 25000\\)\")",
       "Bash(node -e \"setTimeout\\(\\(\\)=>console.log\\('waited 20s'\\), 20000\\)\")",
       "Bash(git rm *)",
-      "Bash(node resend.mjs)"
+      "Bash(node resend.mjs)",
+      "mcp__supabase__list_edge_functions"
     ]
   }
 }
