@@ -89,6 +89,66 @@ create trigger on_new_response_notify
   execute function notify_form_owner_on_response();
 
 -- ─────────────────────────────────────────────
+-- EMAIL ALERTS ON NEW RESPONSE (Resend, per-form opt-in)
+-- ─────────────────────────────────────────────
+-- Secrets (RESEND_API_KEY + an internal shared secret) live in Supabase Vault,
+-- never in this file or in migration history. Seeded once via:
+--   select vault.create_secret('<key>', 'resend_api_key', '...');
+--   select vault.create_secret(encode(gen_random_bytes(32), 'hex'), 'submission_email_internal_secret', '...');
+create extension if not exists pg_net;
+
+create or replace function get_decrypted_secret(secret_name text)
+returns text
+language sql
+security definer
+set search_path = 'public, vault'
+as $$
+  select decrypted_secret from vault.decrypted_secrets where name = secret_name;
+$$;
+
+revoke all on function get_decrypted_secret(text) from public, anon, authenticated;
+grant execute on function get_decrypted_secret(text) to service_role;
+
+-- Fires the `send-submission-email` Edge Function (supabase/functions/send-submission-email)
+-- whenever forms.settings->>'email_alert_enabled' is true for the submitted form. The Edge
+-- Function re-validates the setting, resolves recipients, and sends via Resend.
+create or replace function notify_submission_email_alert()
+returns trigger
+language plpgsql
+security definer
+set search_path = 'public'
+as $$
+declare
+  v_enabled boolean;
+begin
+  select coalesce((f.settings->>'email_alert_enabled')::boolean, false)
+  into v_enabled
+  from forms f
+  where f.id = new.form_id;
+
+  if v_enabled then
+    perform net.http_post(
+      url := 'https://eklcljkwdsfhsfjhezqk.supabase.co/functions/v1/send-submission-email',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'X-Internal-Secret', get_decrypted_secret('submission_email_internal_secret')
+      ),
+      body := jsonb_build_object('response_id', new.id, 'form_id', new.form_id),
+      timeout_milliseconds := 10000
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_new_response_email_alert on responses;
+create trigger on_new_response_email_alert
+  after insert on responses
+  for each row
+  execute function notify_submission_email_alert();
+
+-- ─────────────────────────────────────────────
 -- PUBLIC SUBMISSION RPC
 -- ─────────────────────────────────────────────
 drop function if exists submit_response_public(uuid, jsonb);

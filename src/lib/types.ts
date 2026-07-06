@@ -179,6 +179,8 @@ export interface FormSettings {
   submission_end_date?: string        // YYYY-MM-DD — form closed after this date (Israel timezone)
   redirect_params?: Array<{ field_id: string; param_name: string }>
   custom_css?: string             // advanced: raw CSS injected into the public/embed form, scoped to #amrl-form-root
+  email_alert_enabled?: boolean   // send an email whenever a new response is submitted
+  email_alert_recipients?: string // comma/whitespace-separated emails; empty = form owner's account email
 }
 
 // ─── Per-form datasets ("mini databases") ────────────────────────────────────

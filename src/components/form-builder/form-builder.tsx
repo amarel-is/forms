@@ -191,6 +191,12 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const [customCss, setCustomCss] = useState(
     initialForm?.settings?.custom_css ?? ""
   )
+  const [emailAlertEnabled, setEmailAlertEnabled] = useState(
+    initialForm?.settings?.email_alert_enabled ?? false
+  )
+  const [emailAlertRecipients, setEmailAlertRecipients] = useState(
+    initialForm?.settings?.email_alert_recipients ?? ""
+  )
   const [aiChatOpen, setAiChatOpen] = useState(false)
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false)
 
@@ -219,6 +225,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       submissionEndDate: initialForm?.settings?.submission_end_date ?? "",
       redirectParams: initialForm?.settings?.redirect_params ?? [],
       customCss: initialForm?.settings?.custom_css ?? "",
+      emailAlertEnabled: initialForm?.settings?.email_alert_enabled ?? false,
+      emailAlertRecipients: initialForm?.settings?.email_alert_recipients ?? "",
     })
   )
 
@@ -227,10 +235,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       name, description, fields, formType, submitLabel,
       afterSubmit, submitMessage, thankYouMessage, thankYouRecaps, redirectUrl, titleAlign, hideBranding,
       submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
-      submissionStartDate, submissionEndDate, redirectParams, customCss,
+      submissionStartDate, submissionEndDate, redirectParams, customCss, emailAlertEnabled, emailAlertRecipients,
     })
     return current !== savedSnapshotRef.current
-  }, [name, description, fields, formType, submitLabel, afterSubmit, submitMessage, thankYouMessage, thankYouRecaps, redirectUrl, titleAlign, hideBranding, submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, customCss])
+  }, [name, description, fields, formType, submitLabel, afterSubmit, submitMessage, thankYouMessage, thankYouRecaps, redirectUrl, titleAlign, hideBranding, submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage, submissionStartDate, submissionEndDate, redirectParams, customCss, emailAlertEnabled, emailAlertRecipients])
 
   useUnsavedChanges(isDirty)
 
@@ -468,6 +476,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
             ...(submissionStartDate ? { submission_start_date: submissionStartDate } : {}),
             ...(submissionEndDate ? { submission_end_date: submissionEndDate } : {}),
             ...(customCss.trim() ? { custom_css: customCss } : {}),
+            email_alert_enabled: emailAlertEnabled || undefined,
+            ...(emailAlertEnabled && emailAlertRecipients.trim() ? { email_alert_recipients: emailAlertRecipients.trim() } : {}),
             ...(dirField && { attendance_direction_field: dirField.id }),
             ...(idField && { attendance_id_field: idField.id }),
             ...(formType === "approval" ? {
@@ -511,7 +521,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           name, description, fields, formType, submitLabel,
           afterSubmit, redirectUrl, titleAlign, hideBranding,
           submissionLimitMode, submissionLimitFieldId, submissionLimitCount, submissionLimitErrorMessage,
-          submissionStartDate, submissionEndDate, redirectParams, customCss,
+          submissionStartDate, submissionEndDate, redirectParams, customCss, emailAlertEnabled, emailAlertRecipients,
         })
 
         if (publish !== undefined) {
@@ -1248,6 +1258,28 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
                   <Separator />
 
+                  {/* Email alerts on new submission */}
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={emailAlertEnabled}
+                        onCheckedChange={(checked) => setEmailAlertEnabled(Boolean(checked))}
+                      />
+                      <span className="text-xs text-neutral-700">שלח לי מייל בכל הגשה חדשה</span>
+                    </label>
+                    {emailAlertEnabled && (
+                      <Input
+                        value={emailAlertRecipients}
+                        onChange={(e) => setEmailAlertRecipients(e.target.value)}
+                        placeholder="כתובות מייל מופרדות בפסיק (ריק = כתובת המשתמש שלי)"
+                        dir="ltr"
+                        className="h-8 rounded-lg text-xs"
+                      />
+                    )}
+                  </div>
+
+                  <Separator />
+
                   {/* Custom CSS (advanced) */}
                   <div className="space-y-2">
                     <Label className="text-xs font-medium text-neutral-600 uppercase tracking-wide flex items-center gap-1.5">
@@ -1575,6 +1607,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           if (u.submission_start_date !== undefined) setSubmissionStartDate(u.submission_start_date)
           if (u.submission_end_date !== undefined) setSubmissionEndDate(u.submission_end_date)
           if (u.custom_css !== undefined) setCustomCss(u.custom_css)
+          if (u.email_alert_enabled !== undefined) setEmailAlertEnabled(u.email_alert_enabled)
+          if (u.email_alert_recipients !== undefined) setEmailAlertRecipients(u.email_alert_recipients)
         }}
         onApprovalStepsUpdate={(steps) => {
           if (!steps || steps.length === 0) {

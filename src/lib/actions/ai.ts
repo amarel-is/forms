@@ -185,6 +185,8 @@ const FormGenerationSchema = z.object({
   submission_start_date: z.string().nullable().describe("YYYY-MM-DD, Israel timezone"),
   submission_end_date: z.string().nullable(),
   custom_css: z.string().nullable().describe("raw scoped CSS for visual styling — only when the user asks to design/style the form"),
+  email_alert_enabled: z.boolean().nullable().describe("true if the user wants to be emailed whenever someone submits the form"),
+  email_alert_recipients: z.string().nullable().describe("comma-separated email addresses to notify; null to default to the form owner's account email"),
   datasets: z.array(AIDatasetSchema).nullable(),
   fields: z.array(AIFieldSchema),
   approval_workflow: AIApprovalWorkflowSchema.nullable(),
@@ -288,6 +290,7 @@ SUBMISSION CONTROLS
 - submission_limit_field_key + submission_limit_count + submission_limit_error_message: cap submissions per unique value (field mode).
 - submission_start_date / submission_end_date: YYYY-MM-DD bounds (Israel timezone).
 - hide_branding: true to hide the Amarel powered-by footer.
+- email_alert_enabled + email_alert_recipients: email the owner (or the given addresses) whenever someone submits the form. Only set when the user explicitly asks for submission notifications/alerts.
 - after_submit="redirect" + redirect_url: external redirect after submit, otherwise "thank_you".
 - redirect_params: array of { field_key, param_name } — append submitted field values as query params to the redirect URL.
 - submit_message: the thank-you page heading. thank_you_message: the thank-you page body (markdown supported). Both can embed the submitter's own answers with {{תווית שדה}} placeholders matching a field's exact label — e.g. "היי {{שם מלא}}, נתראה ב-{{מיקום האירוע}}!". Use this when the user wants a personalized confirmation screen.
@@ -556,6 +559,10 @@ export async function generateFormWithAI(
     if (parsed.submission_start_date) settings.submission_start_date = parsed.submission_start_date
     if (parsed.submission_end_date) settings.submission_end_date = parsed.submission_end_date
     if (parsed.custom_css?.trim()) settings.custom_css = parsed.custom_css
+    if (parsed.email_alert_enabled) {
+      settings.email_alert_enabled = true
+      if (parsed.email_alert_recipients?.trim()) settings.email_alert_recipients = parsed.email_alert_recipients.trim()
+    }
 
     // Approval workflow
     if (parsed.approval_workflow && parsed.approval_workflow.enabled) {
@@ -694,6 +701,11 @@ const UpdateFormSettingsParams = z.object({
     .string()
     .nullable()
     .describe("raw scoped CSS for visual styling — only when the user asks to design/style the form; pass the complete CSS (it replaces the previous value), or empty string to clear it"),
+  email_alert_enabled: z.boolean().nullable().describe("true to email the owner (or given recipients) on every new submission, false to turn it off"),
+  email_alert_recipients: z
+    .string()
+    .nullable()
+    .describe("comma-separated email addresses to notify; empty string to default to the form owner's account email"),
 })
 
 const SetApprovalWorkflowParams = z.object({
@@ -710,7 +722,7 @@ Field-level tools:
 - reorder_field: Move a field.
 
 Form-level tools:
-- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits, submission date window, custom_css). Only pass the fields you want to change; leave the rest null. submit_message is the thank-you page heading and thank_you_message is its body (markdown ok); both can personalize the screen by embedding the submitter's answers with {{תווית שדה}} placeholders that match a field's exact label (e.g. "היי {{שם מלא}}, נתראה ב-{{מיקום}}"). The thank-you page can also show a recap list of selected dataset items with extra columns — that block is configured visually in the "דף תודה" tab, not via this tool. Submission limiting has two modes via submission_limit_mode: "field" (default — cap per unique value of submission_limit_field_id, e.g. one per ת.ז.) or "device" (one submission per device with NO ID field — use this for live voting / "כל אחד מצביע פעם אחת" without asking for identifying details). For submission_limit_field_id use the exact id of an existing field from the context below.
+- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits, submission date window, custom_css, email alerts). Only pass the fields you want to change; leave the rest null. email_alert_enabled + email_alert_recipients: email the owner (or given addresses) on every new submission — only touch this when the user explicitly asks about submission notifications. submit_message is the thank-you page heading and thank_you_message is its body (markdown ok); both can personalize the screen by embedding the submitter's answers with {{תווית שדה}} placeholders that match a field's exact label (e.g. "היי {{שם מלא}}, נתראה ב-{{מיקום}}"). The thank-you page can also show a recap list of selected dataset items with extra columns — that block is configured visually in the "דף תודה" tab, not via this tool. Submission limiting has two modes via submission_limit_mode: "field" (default — cap per unique value of submission_limit_field_id, e.g. one per ת.ז.) or "device" (one submission per device with NO ID field — use this for live voting / "כל אחד מצביע פעם אחת" without asking for identifying details). For submission_limit_field_id use the exact id of an existing field from the context below.
 
 ${CUSTOM_CSS_DOC}
 - set_approval_workflow: Replace the entire approval workflow. Set enabled=true and provide the ordered list of steps. Each step has approver_name (Hebrew), channel ("email"|"whatsapp"), and source_type: "fixed" (target = email/phone), "from_field" (source_field_key = existing field id), or "from_option_map" (source_field_key + target_by_value array). To clear the workflow pass enabled=false with steps=[].
@@ -751,6 +763,8 @@ export interface ChatSettingsUpdate {
   submission_start_date?: string
   submission_end_date?: string
   custom_css?: string
+  email_alert_enabled?: boolean
+  email_alert_recipients?: string
 }
 
 function applyToolCalls(
@@ -878,6 +892,8 @@ function applyToolCalls(
         if (parsed.submission_start_date !== null) { settings.submission_start_date = parsed.submission_start_date; changed.push("תאריך פתיחה") }
         if (parsed.submission_end_date !== null) { settings.submission_end_date = parsed.submission_end_date; changed.push("תאריך סגירה") }
         if (parsed.custom_css !== null) { settings.custom_css = parsed.custom_css; changed.push("עיצוב CSS") }
+        if (parsed.email_alert_enabled !== null) { settings.email_alert_enabled = parsed.email_alert_enabled; changed.push("התראות מייל") }
+        if (parsed.email_alert_recipients !== null) { settings.email_alert_recipients = parsed.email_alert_recipients }
         if (changed.length > 0) summary.push(`הגדרות עודכנו: ${changed.join(", ")}`)
         break
       }
