@@ -5,7 +5,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2"
 
 const SITE_URL = "https://forms.amarel.net"
-const RESEND_FROM = "Amarel Forms <onboarding@resend.dev>"
+const RESEND_FROM = "Amarel Forms <alerts@resend.amarel.net>"
 
 interface FieldConfig {
   id: string
