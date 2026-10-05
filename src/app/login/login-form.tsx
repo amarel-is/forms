@@ -4,12 +4,13 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Loader2, Mail } from "lucide-react"
+import { Loader2, Mail, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
+import { sendLoginCodeWhatsApp } from "@/lib/actions/whatsapp-otp"
 
 type Step = "credentials" | "otp"
 
@@ -43,6 +44,9 @@ export default function LoginForm() {
   const [password, setPassword] = useState("")
   const [otp, setOtp] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showWhatsApp, setShowWhatsApp] = useState(false)
+  const [phone, setPhone] = useState("")
+  const [sendingWa, setSendingWa] = useState(false)
 
   async function handleCredentialsSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -124,6 +128,22 @@ export default function LoginForm() {
     }
   }
 
+  async function handleSendWhatsApp() {
+    setSendingWa(true)
+    try {
+      const { error } = await sendLoginCodeWhatsApp(phone)
+      if (error) {
+        toast.error(error)
+      } else {
+        toast.success("הקוד נשלח לוואטסאפ — הקוד מהמייל כבר לא בתוקף")
+        setShowWhatsApp(false)
+        setOtp("")
+      }
+    } finally {
+      setSendingWa(false)
+    }
+  }
+
   // ── OTP verification step ─────────────────────────────────────
   if (step === "otp") {
     return (
@@ -170,12 +190,50 @@ export default function LoginForm() {
           </CardContent>
 
           <CardFooter className="pb-6 flex flex-col items-center gap-2">
+            {showWhatsApp ? (
+              <div className="w-full space-y-2 pb-2">
+                <Label htmlFor="wa-phone" className="text-sm font-medium">
+                  מספר נייד לקבלת הקוד בוואטסאפ
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="wa-phone"
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="050-1234567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="h-10 rounded-xl flex-1"
+                    dir="ltr"
+                    autoComplete="tel"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleSendWhatsApp}
+                    disabled={sendingWa || phone.replace(/\D/g, "").length < 9}
+                    className="h-10 rounded-xl"
+                  >
+                    {sendingWa ? <Loader2 className="h-4 w-4 animate-spin" /> : "שלח"}
+                  </Button>
+                </div>
+                <p className="text-xs text-neutral-400">המספר לא נשמר במערכת</p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowWhatsApp(true)}
+                className="flex items-center gap-1.5 text-sm text-green-700 hover:text-green-800 hover:underline"
+              >
+                <MessageCircle className="h-4 w-4" />
+                לא הגיע מייל? קבל את הקוד בוואטסאפ
+              </button>
+            )}
             <button
               type="button"
               onClick={handleResendOtp}
               className="text-sm text-neutral-500 hover:text-neutral-800 hover:underline"
             >
-              לא קיבלת קוד? שלח מחדש
+              שלח מחדש למייל
             </button>
             <button
               type="button"
