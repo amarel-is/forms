@@ -13,6 +13,17 @@ import {
 const PRODUCT_UPDATES: { date: string; title: string; items: string[] }[] = [
   {
     date: "12 באוקטובר 2026",
+    title: "שיתוף תוצאות מסוננות בקישור",
+    items: [
+      "בעמוד התוצאות אפשר ליצור קישור שמציג רק חלק מההגשות — לפי ערך בשדה בחירה, למשל רק נרשמי סדנה מסוימת",
+      "בוחרים אילו עמודות יוצגו, ושאר התשובות לא נחשפות בקישור",
+      "אפשר לאפשר הורדה לאקסל, להגן בסיסמה ולקבוע תאריך תפוגה",
+      "הרשימה בקישור מתעדכנת אוטומטית בכל הגשה חדשה שמתאימה לסינון",
+      "לכל קישור יש מתג הפעלה/השבתה, מונה צפיות ואפשרות מחיקה",
+    ],
+  },
+  {
+    date: "12 באוקטובר 2026",
     title: "עוזר ה-AI מעצב גם את דף התודה",
     items: [
       "אפשר לבקש מעוזר ה-AI לכתוב או לשנות את הכותרת ואת התוכן של דף התודה, כולל הדגשות, קישורים ורשימות",
@@ -261,7 +272,7 @@ export function ProductUpdatesDialog() {
           </DialogHeader>
           <div className="overflow-y-auto space-y-6 pr-1 -mr-1">
             {PRODUCT_UPDATES.map((section) => (
-              <section key={section.date}>
+              <section key={`${section.date}-${section.title}`}>
                 <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">
                   {section.date}
                 </p>

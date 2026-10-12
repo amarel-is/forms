@@ -11,10 +11,12 @@ import { ExportButton } from "@/components/results/export-button"
 import { ResetResponsesButton } from "@/components/results/reset-responses-button"
 import { CopyLinkButton } from "@/components/results/copy-link-button"
 import { ShareFormDialog } from "@/components/results/share-form-dialog"
+import { ShareLinksPanel } from "@/components/results/share-links-panel"
 import { AppHeader } from "@/components/layout/amarel-nav"
 import { createClient } from "@/lib/supabase/server"
 import { getAuthContext } from "@/lib/supabase/auth-context"
 import { getResponseApprovalsByForm } from "@/lib/actions/approvals"
+import { getShareLinks } from "@/lib/actions/share-links"
 import { rowToForm, rowToResponse, type FormResponse } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -69,6 +71,15 @@ export default async function ResultsPage({ params }: Props) {
     ? await getResponseApprovalsByForm(id)
     : { byResponseId: {} }
   const lastResponse = responses.length > 0 ? responses[0].submitted_at : null
+
+  const { links: shareLinks } = await getShareLinks(id)
+  // Only choice-field values go to the client panel (for live match counts).
+  const choiceFieldIds = form.fields
+    .filter((f) => f.type === "dropdown" || f.type === "radio" || f.type === "multiselect")
+    .map((f) => f.id)
+  const shareResponsesData = (responses as FormResponse[]).map((r) =>
+    Object.fromEntries(choiceFieldIds.filter((fid) => fid in r.data).map((fid) => [fid, r.data[fid]]))
+  )
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -162,6 +173,13 @@ export default async function ResultsPage({ params }: Props) {
             <Separator />
           </>
         )}
+
+        <ShareLinksPanel
+          formId={id}
+          fields={form.fields}
+          initialLinks={shareLinks}
+          responsesData={shareResponsesData}
+        />
 
         {/* Table */}
         <div>

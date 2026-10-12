@@ -225,6 +225,57 @@ export interface Form {
   updated_at: string
 }
 
+// ─── Result share links ──────────────────────────────────────────────────────
+// A public, read-only view of the responses whose choice-field value matches
+// one of filter_values. column_ids may include SUBMITTED_AT_COLUMN.
+
+export const SUBMITTED_AT_COLUMN = "__submitted_at"
+
+export interface ResultShareLink {
+  id: string
+  form_id: string
+  token: string
+  name: string
+  filter_field_id: string
+  filter_values: string[]
+  column_ids: string[]
+  allow_download: boolean
+  is_active: boolean
+  expires_at: string | null   // YYYY-MM-DD, inclusive, Israel timezone
+  has_password: boolean
+  view_count: number
+  created_at: string
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function rowToShareLink(row: any): ResultShareLink {
+  return {
+    id: row.id,
+    form_id: row.form_id,
+    token: row.token,
+    name: row.name,
+    filter_field_id: row.filter_field_id,
+    filter_values: row.filter_values ?? [],
+    column_ids: row.column_ids ?? [],
+    allow_download: row.allow_download,
+    is_active: row.is_active,
+    expires_at: row.expires_at ?? null,
+    has_password: !!row.password_hash,
+    view_count: row.view_count ?? 0,
+    created_at: row.created_at,
+  }
+}
+
+/** True when the response's value for the link's filter field is one of its values. */
+export function responseMatchesShareLink(
+  data: Record<string, string | string[]>,
+  link: Pick<ResultShareLink, "filter_field_id" | "filter_values">
+): boolean {
+  const v = data[link.filter_field_id]
+  if (Array.isArray(v)) return v.some((x) => link.filter_values.includes(x))
+  return typeof v === "string" && link.filter_values.includes(v)
+}
+
 export interface FormResponse {
   id: string
   form_id: string

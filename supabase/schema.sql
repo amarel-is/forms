@@ -681,3 +681,51 @@ create index if not exists form_webhooks_form_id_idx on form_webhooks(form_id);
 create index if not exists webhook_logs_webhook_id_idx on webhook_logs(webhook_id);
 create index if not exists webhook_logs_form_id_idx on webhook_logs(form_id);
 create index if not exists webhook_logs_created_at_idx on webhook_logs(created_at desc);
+
+-- ─────────────────────────────────────────────
+-- RESULT SHARE LINKS — public, filtered views of a form's responses
+-- Public reads go through the service-role client on the server only
+-- (no anon policy); owners manage their links under RLS.
+-- ─────────────────────────────────────────────
+create table if not exists result_share_links (
+  id               uuid primary key default gen_random_uuid(),
+  form_id          uuid not null references forms(id) on delete cascade,
+  token            text not null unique,
+  name             text not null,
+  filter_field_id  text not null,
+  filter_values    text[] not null default '{}',
+  column_ids       text[] not null default '{}',
+  allow_download   boolean not null default true,
+  is_active        boolean not null default true,
+  expires_at       date,
+  password_hash    text,
+  view_count       integer not null default 0,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+drop trigger if exists result_share_links_updated_at on result_share_links;
+create trigger result_share_links_updated_at
+  before update on result_share_links
+  for each row execute function update_updated_at_column();
+
+create index if not exists result_share_links_form_id_idx on result_share_links(form_id);
+
+alter table result_share_links enable row level security;
+
+drop policy if exists "result_share_links_select_owner" on result_share_links;
+create policy "result_share_links_select_owner" on result_share_links for select using (
+  exists (select 1 from forms where forms.id = result_share_links.form_id and forms.user_id = auth.uid())
+);
+drop policy if exists "result_share_links_insert_owner" on result_share_links;
+create policy "result_share_links_insert_owner" on result_share_links for insert with check (
+  exists (select 1 from forms where forms.id = result_share_links.form_id and forms.user_id = auth.uid())
+);
+drop policy if exists "result_share_links_update_owner" on result_share_links;
+create policy "result_share_links_update_owner" on result_share_links for update using (
+  exists (select 1 from forms where forms.id = result_share_links.form_id and forms.user_id = auth.uid())
+);
+drop policy if exists "result_share_links_delete_owner" on result_share_links;
+create policy "result_share_links_delete_owner" on result_share_links for delete using (
+  exists (select 1 from forms where forms.id = result_share_links.form_id and forms.user_id = auth.uid())
+);
