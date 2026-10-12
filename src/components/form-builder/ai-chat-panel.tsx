@@ -5,13 +5,15 @@ import { Sparkles, Send, Loader2, X, Bot, User } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { chatWithFormAI, type ChatMessage, type ChatSettingsUpdate } from "@/lib/actions/ai"
-import type { FieldConfig, ApprovalWorkflow } from "@/lib/types"
+import { chatWithFormAI, type ChatMessage, type ChatSettingsUpdate, type ThankYouContext } from "@/lib/actions/ai"
+import type { FieldConfig, ApprovalWorkflow, FormDataset } from "@/lib/types"
 
 interface AiChatPanelProps {
   open: boolean
   onClose: () => void
   fields: FieldConfig[]
+  datasets?: FormDataset[]
+  thankYou?: ThankYouContext
   onFieldsUpdate: (fields: FieldConfig[]) => void
   onSettingsUpdate?: (updates: ChatSettingsUpdate) => void
   onApprovalStepsUpdate?: (steps: ApprovalWorkflow["steps"] | null) => void
@@ -23,7 +25,7 @@ interface DisplayMessage {
   summary?: string[]
 }
 
-export function AiChatPanel({ open, onClose, fields, onFieldsUpdate, onSettingsUpdate, onApprovalStepsUpdate }: AiChatPanelProps) {
+export function AiChatPanel({ open, onClose, fields, datasets, thankYou, onFieldsUpdate, onSettingsUpdate, onApprovalStepsUpdate }: AiChatPanelProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [history, setHistory] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
@@ -55,6 +57,8 @@ export function AiChatPanel({ open, onClose, fields, onFieldsUpdate, onSettingsU
         message: text,
         currentFields: fields,
         history,
+        datasets,
+        thankYou,
       })
 
       if (result.error) {

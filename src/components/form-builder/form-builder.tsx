@@ -1590,12 +1590,21 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         open={aiChatOpen}
         onClose={() => setAiChatOpen(false)}
         fields={fields}
+        datasets={datasets}
+        thankYou={{
+          after_submit: afterSubmit,
+          submit_message: submitMessage,
+          thank_you_message: thankYouMessage,
+          redirect_url: redirectUrl,
+          recaps: thankYouRecaps,
+        }}
         onFieldsUpdate={setFields}
         onSettingsUpdate={(u) => {
           if (u.form_type !== undefined) setFormType(u.form_type)
           if (u.submit_label !== undefined) setSubmitLabel(u.submit_label)
           if (u.submit_message !== undefined) setSubmitMessage(u.submit_message)
           if (u.thank_you_message !== undefined) setThankYouMessage(u.thank_you_message)
+          if (u.thank_you_recaps !== undefined) setThankYouRecaps(u.thank_you_recaps)
           if (u.after_submit !== undefined) setAfterSubmit(u.after_submit)
           if (u.redirect_url !== undefined) setRedirectUrl(u.redirect_url)
           if (u.redirect_params !== undefined) setRedirectParams(u.redirect_params)

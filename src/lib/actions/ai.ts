@@ -14,6 +14,7 @@ import type {
   DatasetRow,
   ApprovalWorkflow,
   FormType,
+  ThankYouRecapBlock,
 } from "@/lib/types"
 
 // בחירת מודלים:
@@ -143,6 +144,14 @@ const AIDatasetSchema = z.object({
 
 type AIDataset = z.infer<typeof AIDatasetSchema>
 
+const AIThankYouRecapSchema = z.object({
+  title: z.string().nullable().describe('optional heading above the list, e.g. "הפריטים שבחרת"'),
+  source_field_key: z.string().describe("key of a dataset-bound dropdown / radio / multiselect field"),
+  column_keys: z.array(z.string()).describe("dataset column keys to show per selected item"),
+  layout: z.enum(["list", "table"]).nullable(),
+  footer: z.string().nullable().describe('optional note below the list, e.g. "הפריטים יגיעו בקרוב"'),
+})
+
 const AIApprovalStepSchema = z.object({
   approver_name: z.string(),
   channel: z.enum(["email", "whatsapp"]),
@@ -171,6 +180,7 @@ const FormGenerationSchema = z.object({
   submit_label: z.string().nullable(),
   submit_message: z.string().nullable(),
   thank_you_message: z.string().nullable(),
+  thank_you_recaps: z.array(AIThankYouRecapSchema).nullable(),
   after_submit: z.enum(["thank_you", "redirect"]).nullable(),
   redirect_url: z.string().nullable(),
   redirect_params: z.array(z.object({ field_key: z.string(), param_name: z.string() })).nullable(),
@@ -207,6 +217,17 @@ The CSS is auto-scoped to the form (injected via @scope), so write plain selecto
 - [data-field]            → a single field wrapper (target a type with [data-field-type="text"|"dropdown"|"radio"|"number"|...]); inputs are [data-field] input, [data-field] select
 - [data-form-submit]      → the submit button
 Because Tailwind utility classes already style the form, append !important to declarations that must win (e.g. background, color, border-radius). Output ONLY CSS (no <style> tag, no markdown fences, no JS). When updating an existing design, return the COMPLETE css (it replaces the previous value).`
+
+// ─── Thank-you page capability (shared between one-shot + editor prompts) ───
+
+const THANK_YOU_DOC = `AFTER SUBMIT / THANK-YOU PAGE ("דף תודה")
+- after_submit: "thank_you" (default) shows the built-in thank-you page; "redirect" sends the submitter to redirect_url instead (then the thank-you page is NOT shown, so heading/body/recaps are ignored).
+- redirect_params: append submitted field values as query params to the redirect URL (e.g. ?name=...), each { field, param_name }. Only meaningful with "redirect".
+- submit_message: the thank-you page HEADING (plain text, short). Default when empty: "תודה על תגובתך!" (attendance: "הדיווח נקלט בהצלחה!").
+- thank_you_message: the thank-you page BODY. Supports Markdown — **bold**, *italic*, [link text](https://...), bullet / numbered lists, line breaks. Default when empty: "תגובתך נקלטה בהצלחה.".
+- Personalization: both heading and body can embed the submitter's own answers with {{תווית שדה}} placeholders matching a field's EXACT label — e.g. "היי {{שם מלא}}, נתראה ב-{{מיקום האירוע}}!". Multiselect answers render comma-separated. Use this whenever the user wants a personalized confirmation screen.
+- thank_you_recaps ("סיכום פריטים מהמאגר"): blocks that list the dataset items the submitter chose, showing extra dataset columns — not just the label (e.g. product image + price, workshop + room + WhatsApp group link). Each block: source field (must be a dropdown / radio / multiselect bound to a dataset via data_source), the dataset columns to show, optional title above, layout "list" (default, cards) or "table", optional footer note. Image columns render as thumbnails; URL values render as a clickable link. Several blocks are allowed (one per dataset-bound field). If no dataset-bound selection field exists yet, create the dataset + bound field first.
+- Use the thank-you page for next steps the submitter needs (what happens now, links, contact details, schedule) — keep it short and warm, in Hebrew.`
 
 // ─── System prompt with full capabilities ──────────────────────────────────
 
@@ -291,10 +312,9 @@ SUBMISSION CONTROLS
 - submission_start_date / submission_end_date: YYYY-MM-DD bounds (Israel timezone).
 - hide_branding: true to hide the Amarel powered-by footer.
 - email_alert_enabled + email_alert_recipients: email the owner (or the given addresses) whenever someone submits the form. Only set when the user explicitly asks for submission notifications/alerts.
-- after_submit="redirect" + redirect_url: external redirect after submit, otherwise "thank_you".
-- redirect_params: array of { field_key, param_name } — append submitted field values as query params to the redirect URL.
-- submit_message: the thank-you page heading. thank_you_message: the thank-you page body (markdown supported). Both can embed the submitter's own answers with {{תווית שדה}} placeholders matching a field's exact label — e.g. "היי {{שם מלא}}, נתראה ב-{{מיקום האירוע}}!". Use this when the user wants a personalized confirmation screen.
-- The thank-you page can ALSO show a "dataset recap" — a list of the dataset items the user selected, with extra columns (not just the label). That block is configured visually in the builder's "דף תודה" tab (not via these tools); if the user asks for it, set up a dataset-backed selection field and point them there.
+
+${THANK_YOU_DOC}
+In this one-shot schema: redirect_params use field_key; thank_you_recaps use source_field_key (a field key) + column_keys (column keys of that field's dataset).
 
 DESIGN GUIDELINES
 - Long forms → break with section + subheading + paragraph (info) for instructions.
@@ -530,6 +550,28 @@ export async function generateFormWithAI(
     }
     if (parsed.submit_message) settings.submit_message = parsed.submit_message
     if (parsed.thank_you_message) settings.thank_you_message = parsed.thank_you_message
+    if (parsed.thank_you_recaps?.length) {
+      const recaps: ThankYouRecapBlock[] = []
+      for (const r of parsed.thank_you_recaps) {
+        const fieldId = maps.fieldKeyToId.get(r.source_field_key)
+        const dsKey = parsed.fields.find((f) => f.key === r.source_field_key)?.data_source_dataset_key
+        const colMap = dsKey ? maps.datasetColumnKeyToId.get(dsKey) : undefined
+        if (!fieldId || !colMap) continue
+        const columnIds = r.column_keys
+          .map((k) => colMap.get(k))
+          .filter((id): id is string => !!id)
+        if (columnIds.length === 0) continue
+        recaps.push({
+          id: nanoid(8),
+          source_field_id: fieldId,
+          column_ids: columnIds,
+          layout: r.layout ?? "list",
+          ...(r.title ? { title: r.title } : {}),
+          ...(r.footer ? { footer: r.footer } : {}),
+        })
+      }
+      if (recaps.length > 0) settings.thank_you_recaps = recaps
+    }
     if (parsed.after_submit === "redirect" && parsed.redirect_url) {
       settings.redirect_url = parsed.redirect_url
       if (parsed.redirect_params?.length) {
@@ -713,6 +755,18 @@ const SetApprovalWorkflowParams = z.object({
   steps: z.array(AIApprovalStepSchema),
 })
 
+const SetThankYouRecapsParams = z.object({
+  blocks: z.array(
+    z.object({
+      title: z.string().nullable(),
+      source_field_id: z.string().describe("id of an existing dataset-bound selection field (from context)"),
+      column_ids: z.array(z.string()).describe("column ids of that field's dataset (from context)"),
+      layout: z.enum(["list", "table"]).nullable(),
+      footer: z.string().nullable(),
+    })
+  ),
+})
+
 const EDITOR_SYSTEM_PROMPT = `You are an AI assistant inside a Hebrew form builder. The user can ask you to modify the form they are currently editing.
 
 Field-level tools:
@@ -722,9 +776,13 @@ Field-level tools:
 - reorder_field: Move a field.
 
 Form-level tools:
-- update_form_settings: Partial update of form-level settings (form type, submit label/message, after-submit behaviour, hide branding, submission limits, submission date window, custom_css, email alerts). Only pass the fields you want to change; leave the rest null. email_alert_enabled + email_alert_recipients: email the owner (or given addresses) on every new submission — only touch this when the user explicitly asks about submission notifications. submit_message is the thank-you page heading and thank_you_message is its body (markdown ok); both can personalize the screen by embedding the submitter's answers with {{תווית שדה}} placeholders that match a field's exact label (e.g. "היי {{שם מלא}}, נתראה ב-{{מיקום}}"). The thank-you page can also show a recap list of selected dataset items with extra columns — that block is configured visually in the "דף תודה" tab, not via this tool. Submission limiting has two modes via submission_limit_mode: "field" (default — cap per unique value of submission_limit_field_id, e.g. one per ת.ז.) or "device" (one submission per device with NO ID field — use this for live voting / "כל אחד מצביע פעם אחת" without asking for identifying details). For submission_limit_field_id use the exact id of an existing field from the context below.
+- update_form_settings: Partial update of form-level settings (form type, submit label, thank-you heading/body, after-submit behaviour, redirect, hide branding, submission limits, submission date window, custom_css, email alerts). Only pass the fields you want to change; leave the rest null. email_alert_enabled + email_alert_recipients: email the owner (or given addresses) on every new submission — only touch this when the user explicitly asks about submission notifications. Submission limiting has two modes via submission_limit_mode: "field" (default — cap per unique value of submission_limit_field_id, e.g. one per ת.ז.) or "device" (one submission per device with NO ID field — use this for live voting / "כל אחד מצביע פעם אחת" without asking for identifying details). For submission_limit_field_id use the exact id of an existing field from the context below.
 
 ${CUSTOM_CSS_DOC}
+
+${THANK_YOU_DOC}
+In this editor: heading/body/after_submit/redirect go through update_form_settings (redirect_params use existing field ids as field_id). When editing an existing heading/body, start from the current values shown below and return the full new text. Recap blocks go through set_thank_you_recaps.
+- set_thank_you_recaps: Replace ALL thank-you recap blocks. Pass the complete list (include existing blocks you want to keep — they appear below); blocks=[] removes them all. source_field_id must be a dataset-bound field id and column_ids must be ids of that field's dataset columns, both from the context below. If the needed dataset-bound field doesn't exist, explain that a dataset + bound field must be created first (datasets are managed in the "מאגרי מידע" panel).
 - set_approval_workflow: Replace the entire approval workflow. Set enabled=true and provide the ordered list of steps. Each step has approver_name (Hebrew), channel ("email"|"whatsapp"), and source_type: "fixed" (target = email/phone), "from_field" (source_field_key = existing field id), or "from_option_map" (source_field_key + target_by_value array). To clear the workflow pass enabled=false with steps=[].
 
 The current form fields appear below (each with its id — use the id as field_key / source_field_key / submission_limit_field_id in tool arguments). You can call multiple tools in one response.
@@ -742,9 +800,46 @@ function serializeFieldsForContext(fields: FieldConfig[]): string {
       if (f.validation) desc += ` [ולידציה: ${f.validation.type}]`
       if (f.conditions) desc += " [מותנה]"
       if (f.paragraph_style) desc += ` [סגנון: ${f.paragraph_style}]`
+      if (f.data_source?.dataset_id) desc += ` [מבוסס מאגר: ${f.data_source.dataset_id}]`
       return desc
     })
     .join("\n")
+}
+
+function serializeDatasetsForContext(datasets: FormDataset[]): string {
+  if (datasets.length === 0) return "(אין מאגרי מידע)"
+  return datasets
+    .map((ds) => {
+      const cols = ds.columns.map((c) => `"${c.name}" (id: ${c.id}, ${c.type})`).join(", ")
+      return `- "${ds.name}" (id: ${ds.id}, ${ds.rows.length} שורות) — עמודות: ${cols}`
+    })
+    .join("\n")
+}
+
+export interface ThankYouContext {
+  after_submit?: "thank_you" | "redirect"
+  submit_message?: string
+  thank_you_message?: string
+  redirect_url?: string
+  recaps?: ThankYouRecapBlock[]
+}
+
+function serializeThankYouForContext(ty: ThankYouContext): string {
+  const recaps = ty.recaps ?? []
+  return [
+    `after_submit: ${ty.after_submit ?? "thank_you"}`,
+    `redirect_url: ${ty.redirect_url || "(ריק)"}`,
+    `כותרת (submit_message): ${ty.submit_message || "(ברירת מחדל)"}`,
+    `תוכן (thank_you_message): ${ty.thank_you_message || "(ברירת מחדל)"}`,
+    recaps.length === 0
+      ? "בלוקי סיכום פריטים: אין"
+      : `בלוקי סיכום פריטים:\n${recaps
+          .map(
+            (r) =>
+              `  - source_field_id: ${r.source_field_id}, column_ids: [${r.column_ids.join(", ")}], layout: ${r.layout ?? "list"}, title: ${r.title || "-"}, footer: ${r.footer || "-"}`
+          )
+          .join("\n")}`,
+  ].join("\n")
 }
 
 export interface ChatSettingsUpdate {
@@ -765,11 +860,13 @@ export interface ChatSettingsUpdate {
   custom_css?: string
   email_alert_enabled?: boolean
   email_alert_recipients?: string
+  thank_you_recaps?: ThankYouRecapBlock[]
 }
 
 function applyToolCalls(
   fields: FieldConfig[],
-  toolCalls: Array<{ name: string; args: unknown }>
+  toolCalls: Array<{ name: string; args: unknown }>,
+  datasets: FormDataset[] = []
 ): {
   fields: FieldConfig[]
   summary: string[]
@@ -898,6 +995,30 @@ function applyToolCalls(
         break
       }
 
+      case "set_thank_you_recaps": {
+        const parsed = args as z.infer<typeof SetThankYouRecapsParams>
+        const recaps: ThankYouRecapBlock[] = []
+        for (const b of parsed.blocks) {
+          const field = result.find((f) => f.id === b.source_field_id)
+          const ds = datasets.find((d) => d.id === field?.data_source?.dataset_id)
+          if (!field || !ds) continue
+          const columnIds = b.column_ids.filter((id) => ds.columns.some((c) => c.id === id))
+          if (columnIds.length === 0) continue
+          recaps.push({
+            id: nanoid(8),
+            source_field_id: field.id,
+            column_ids: columnIds,
+            layout: b.layout ?? "list",
+            ...(b.title ? { title: b.title } : {}),
+            ...(b.footer ? { footer: b.footer } : {}),
+          })
+        }
+        settings ??= {}
+        settings.thank_you_recaps = recaps
+        summary.push(recaps.length > 0 ? `דף תודה: ${recaps.length} בלוקי סיכום פריטים` : "בלוקי סיכום הפריטים הוסרו")
+        break
+      }
+
       case "set_approval_workflow": {
         const parsed = args as z.infer<typeof SetApprovalWorkflowParams>
         if (!parsed.enabled || parsed.steps.length === 0) {
@@ -945,6 +1066,8 @@ export async function chatWithFormAI(input: {
   message: string
   currentFields: FieldConfig[]
   history: ChatMessage[]
+  datasets?: FormDataset[]
+  thankYou?: ThankYouContext
 }): Promise<{
   fields: FieldConfig[]
   aiMessage: string
@@ -967,7 +1090,12 @@ export async function chatWithFormAI(input: {
   }
 
   const fieldsContext = serializeFieldsForContext(input.currentFields)
-  const systemContent = `${EDITOR_SYSTEM_PROMPT}\n\nשדות הטופס הנוכחיים:\n${fieldsContext}`
+  const systemContent = [
+    EDITOR_SYSTEM_PROMPT,
+    `שדות הטופס הנוכחיים:\n${fieldsContext}`,
+    `מאגרי מידע:\n${serializeDatasetsForContext(input.datasets ?? [])}`,
+    `דף תודה נוכחי:\n${serializeThankYouForContext(input.thankYou ?? {})}`,
+  ].join("\n\n")
 
   const messages: OpenAI.ChatCompletionMessageParam[] = [
     { role: "system", content: systemContent },
@@ -1017,7 +1145,12 @@ export async function chatWithFormAI(input: {
         zodFunction({
           name: "update_form_settings",
           parameters: UpdateFormSettingsParams,
-          description: "Update form-level settings (form type, submit label, hide branding, submission limits, date window, custom_css for visual styling, etc.)",
+          description: "Update form-level settings (form type, submit label, thank-you page heading/body, after-submit / redirect, hide branding, submission limits, date window, custom_css for visual styling, etc.)",
+        }),
+        zodFunction({
+          name: "set_thank_you_recaps",
+          parameters: SetThankYouRecapsParams,
+          description: "Replace all thank-you page recap blocks (list the dataset items the submitter selected, with chosen columns)",
         }),
         zodFunction({
           name: "set_approval_workflow",
@@ -1064,7 +1197,8 @@ export async function chatWithFormAI(input: {
 
     const { fields: updatedFields, summary, settings, approvalSteps } = applyToolCalls(
       input.currentFields,
-      parsedCalls
+      parsedCalls,
+      input.datasets ?? []
     )
 
     const assistantContent = msg.content ?? (summary.join(", ") || "השינויים בוצעו")
