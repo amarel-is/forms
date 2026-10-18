@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { decideApprovalByToken, getApprovalByToken } from "@/lib/actions/approvals"
-import { isLayoutField, type FieldConfig } from "@/lib/types"
+import { isLayoutField, type FieldConfig, type AnswerData } from "@/lib/types"
+import { formatAnswerText } from "@/lib/answer-format"
 import {
   Table,
   TableBody,
@@ -18,7 +19,7 @@ function getVisibleFields(
   allFields: FieldConfig[],
   visMode: "all" | "selected" | undefined,
   visibleIds: string[] | undefined,
-  responseData: Record<string, string | string[]>
+  responseData: AnswerData
 ): { label: string; value: string }[] {
   const inputFields = allFields.filter((f) => !isLayoutField(f.type))
   const allowed =
@@ -32,7 +33,7 @@ function getVisibleFields(
       const raw = responseData[f.id]
       return {
         label: f.label || f.id,
-        value: Array.isArray(raw) ? raw.join(", ") : String(raw),
+        value: formatAnswerText(f, raw, "\n"),
       }
     })
 }
@@ -143,7 +144,7 @@ export default async function ApproveByTokenPage({ params, searchParams }: Props
                         <TableCell className="text-xs font-medium text-neutral-500 w-1/3 text-right bg-neutral-50 border-l border-neutral-200">
                           {f.label}
                         </TableCell>
-                        <TableCell className="text-sm text-neutral-800 text-right break-words">
+                        <TableCell className="text-sm text-neutral-800 text-right break-words whitespace-pre-line">
                           {f.value || "—"}
                         </TableCell>
                       </TableRow>

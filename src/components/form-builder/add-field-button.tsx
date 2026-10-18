@@ -22,6 +22,7 @@ import {
   Layers,
   Search,
   Sparkles,
+  Rows3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -111,6 +112,12 @@ const INPUT_FIELD_TYPES: {
     label: "כניסה / יציאה",
     icon: <ArrowLeftRight className="h-4 w-4" />,
     description: "לחצן דיווח נוכחות",
+  },
+  {
+    type: "repeater",
+    label: "קבוצה חוזרת",
+    icon: <Rows3 className="h-4 w-4" />,
+    description: "אותם שדות לכל פריט — למשל לכל עובד",
   },
 ]
 

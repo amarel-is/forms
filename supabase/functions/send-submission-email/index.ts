@@ -11,6 +11,32 @@ interface FieldConfig {
   id: string
   label: string
   type: string
+  sub_fields?: FieldConfig[]
+  item_label?: string
+}
+
+function plainValue(v: unknown): string {
+  if (v == null) return ""
+  if (Array.isArray(v)) return v.filter((x) => x !== "" && x != null).map(String).join(", ")
+  return String(v)
+}
+
+/** Repeater group: one line per item — "עובד 1 — שם: דני; ציוד: מחשב" */
+function formatRepeater(field: FieldConfig, raw: unknown[]): string {
+  const noun = field.item_label?.trim() || "פריט"
+  const lines = raw
+    .filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null && !Array.isArray(it))
+    .map((item, i) => {
+      const pairs = (field.sub_fields ?? [])
+        .map((sf) => {
+          const v = sf.type === "checkbox" ? (item[sf.id] === "true" ? "✓" : "") : plainValue(item[sf.id])
+          return v ? `${escapeHtml(sf.label || "שדה")}: ${escapeHtml(v)}` : ""
+        })
+        .filter(Boolean)
+        .join("; ")
+      return `<b>${escapeHtml(noun)} ${i + 1}</b>${pairs ? ` — ${pairs}` : ""}`
+    })
+  return lines.length > 0 ? lines.join("<br>") : "—"
 }
 
 function escapeHtml(value: string): string {
@@ -24,6 +50,8 @@ function formatAnswer(field: FieldConfig, raw: unknown): string {
   if (raw == null || raw === "") return "—"
 
   if (field.type === "signature") return "✍️ נחתם"
+
+  if (field.type === "repeater" && Array.isArray(raw)) return formatRepeater(field, raw)
 
   if (field.type === "checkbox" && typeof raw !== "object") {
     const truthy = raw === true || raw === "true" || raw === "on" || raw === "yes"

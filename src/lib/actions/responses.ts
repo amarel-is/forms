@@ -5,11 +5,11 @@ import { getAuthContext } from "@/lib/supabase/auth-context"
 import { initializeApprovalForResponse } from "@/lib/actions/approvals"
 import { fireWebhooks } from "@/lib/actions/webhooks"
 import { buildWebhookEnrichment } from "@/lib/webhook-enrich"
-import { rowToForm, rowToResponse, type FormResponse } from "@/lib/types"
+import { rowToForm, rowToResponse, type FormResponse, type AnswerData } from "@/lib/types"
 
 export async function submitResponse(
   formId: string,
-  data: Record<string, string | string[]>,
+  data: AnswerData,
   deviceId?: string
 ): Promise<{ success?: boolean; error?: string; warning?: string; response_id?: string }> {
   const supabase = await createClient()
@@ -53,7 +53,7 @@ export async function submitResponse(
   if (responseId) {
     // Resolve human-readable answers + dataset-backed values (e.g. WhatsApp
     // links) so external consumers get everything without their own lookups.
-    let enrichment: ReturnType<typeof buildWebhookEnrichment> = { answers: {}, resolved: {} }
+    let enrichment: ReturnType<typeof buildWebhookEnrichment> = { answers: {}, items: {}, resolved: {} }
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: formRow } = await (supabase as any)
@@ -71,6 +71,7 @@ export async function submitResponse(
       response_id: responseId,
       response_data: data,
       answers: enrichment.answers,
+      items: enrichment.items,
       resolved: enrichment.resolved,
     }).catch(() => {})
 

@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { deleteResponse } from "@/lib/actions/responses"
 import type { FieldConfig, FormResponse, ResponseApproval, ApprovalStatus } from "@/lib/types"
+import { isRepeaterValue } from "@/lib/types"
+import { formatAnswerText } from "@/lib/answer-format"
+import { RepeaterValueCell } from "./repeater-value-cell"
 
 interface ResponsesTableProps {
   fields: FieldConfig[]
@@ -55,9 +58,9 @@ const APPROVAL_CLASS: Record<ApprovalStatus, string> = {
   expired: "bg-neutral-100 text-neutral-600 border-neutral-200",
 }
 
-function getResponseText(response: FormResponse): string {
-  return Object.values(response.data)
-    .map((v) => (Array.isArray(v) ? v.join(" ") : v ?? ""))
+function getResponseText(response: FormResponse, fields: FieldConfig[]): string {
+  return Object.entries(response.data)
+    .map(([id, v]) => formatAnswerText(fields.find((f) => f.id === id), v, " "))
     .join(" ")
     .toLowerCase()
 }
@@ -69,7 +72,7 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
   const [query, setQuery] = useState("")
 
   const filtered = query.trim()
-    ? responses.filter((r) => getResponseText(r).includes(query.trim().toLowerCase()))
+    ? responses.filter((r) => getResponseText(r, fields).includes(query.trim().toLowerCase()))
     : responses
 
   function handleDelete() {
@@ -87,6 +90,7 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
     }
     if (Array.isArray(val)) {
       if (val.length === 0) return <span className="text-neutral-300">—</span>
+      if (isRepeaterValue(val)) return <span className="text-sm text-neutral-700">{formatAnswerText(undefined, val)}</span>
       return (
         <div className="flex flex-wrap gap-1">
           {val.map((v, i) => (
@@ -215,7 +219,9 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
                       key={f.id}
                       className={`text-right ${compact ? "max-w-[200px] truncate" : "min-w-[160px] max-w-[320px] break-words whitespace-normal"}`}
                     >
-                      {formatValue(response.data[f.id])}
+                      {f.type === "repeater"
+                        ? <RepeaterValueCell field={f} value={response.data[f.id]} />
+                        : formatValue(response.data[f.id])}
                     </TableCell>
                   ))}
                   {extraKeys.map((key) => (

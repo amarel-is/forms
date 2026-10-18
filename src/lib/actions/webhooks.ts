@@ -3,7 +3,8 @@
 import { getAuthContext } from "@/lib/supabase/auth-context"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { buildWebhookEnrichment } from "@/lib/webhook-enrich"
-import { rowToForm, isLayoutField, type FieldConfig } from "@/lib/types"
+import { formatAnswerText } from "@/lib/answer-format"
+import { rowToForm, isLayoutField, type FieldConfig, type AnswerData } from "@/lib/types"
 import crypto from "crypto"
 
 export interface FormWebhook {
@@ -346,7 +347,7 @@ export async function listFormResponsesForResend(formId: string): Promise<{
   // Best-effort display label: a "name" field, else the first labelled input field.
   const nameField =
     fields.find((f) => f.type === "text" && (f.label || "").includes("שם")) ??
-    fields.find((f) => !isLayoutField(f.type) && !!f.label)
+    fields.find((f) => !isLayoutField(f.type) && f.type !== "repeater" && !!f.label)
 
   const { data: rows, error } = await db
     .from("responses")
@@ -368,10 +369,10 @@ export async function listFormResponsesForResend(formId: string): Promise<{
   }
 
   const responses: ResendResponseItem[] = (
-    (rows ?? []) as { id: string; data: Record<string, string | string[]>; submitted_at: string }[]
+    (rows ?? []) as { id: string; data: AnswerData; submitted_at: string }[]
   ).map((r) => {
     const raw = nameField ? (r.data ?? {})[nameField.id] : ""
-    const label = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "")
+    const label = formatAnswerText(nameField, raw, "; ")
     return { id: r.id, label: label.trim(), submitted_at: r.submitted_at, delivered: delivered.has(r.id) }
   })
   return { responses }
@@ -427,7 +428,7 @@ export async function resendFormResponsesToWebhooks(
   const { data: respRows, error: respErr } = await query
   if (respErr) return { sent: 0, failed: 0, total: 0, webhooks: 0, error: respErr.message }
 
-  const responses = ((respRows ?? []) as { id: string; data: Record<string, string | string[]>; submitted_at: string }[]).reverse()
+  const responses = ((respRows ?? []) as { id: string; data: AnswerData; submitted_at: string }[]).reverse()
 
   let sent = 0
   let failed = 0
@@ -441,6 +442,7 @@ export async function resendFormResponsesToWebhooks(
         response_id: r.id,
         response_data: r.data ?? {},
         answers: enrichment.answers,
+        items: enrichment.items,
         resolved: enrichment.resolved,
         resent: true,
       },

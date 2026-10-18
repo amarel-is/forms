@@ -10,7 +10,9 @@ import {
   isLayoutField,
   SUBMITTED_AT_COLUMN,
   type FieldConfig,
+  type AnswerValue,
 } from "@/lib/types"
+import { formatAnswerText } from "@/lib/answer-format"
 
 // Field types a share link can filter by.
 export const SHARE_FILTER_TYPES = ["dropdown", "radio", "multiselect"] as const
@@ -79,11 +81,10 @@ export type ShareViewResult =
       rows: Array<Record<string, string>>
     }
 
-function displayValue(v: unknown): string {
+function displayValue(v: AnswerValue | undefined, field?: FieldConfig): string {
   if (v === null || v === undefined) return ""
-  if (Array.isArray(v)) return v.map(String).join(", ")
-  if (typeof v === "object") return JSON.stringify(v)
-  return String(v)
+  // Repeater items: one line per item (the view renders line breaks)
+  return formatAnswerText(field, v, "\n")
 }
 
 /**
@@ -149,7 +150,7 @@ export async function getShareView(token: string, opts: { countView: boolean }):
                 hour: "2-digit",
                 minute: "2-digit",
               })
-            : displayValue(r.data[c.id])
+            : displayValue(r.data[c.id], form.fields.find((f) => f.id === c.id))
       }
       return out
     })

@@ -39,6 +39,7 @@ import {
   SUBMITTED_AT_COLUMN,
   type FieldConfig,
   type ResultShareLink,
+  type AnswerData,
 } from "@/lib/types"
 import { createShareLink, setShareLinkActive, deleteShareLink } from "@/lib/actions/share-links"
 
@@ -49,7 +50,7 @@ interface ShareLinksPanelProps {
   fields: FieldConfig[]
   initialLinks: ResultShareLink[]
   /** Response data limited to the choice fields — used for live match counts. */
-  responsesData: Array<Record<string, string | string[]>>
+  responsesData: Array<AnswerData>
 }
 
 function formatDate(d: string): string {

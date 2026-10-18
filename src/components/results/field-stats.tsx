@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { summarizeOpenEndedResponses, type AISummary } from "@/lib/actions/ai-insights"
 import type { FieldConfig, FormResponse } from "@/lib/types"
 import { isLayoutField } from "@/lib/types"
+import { repeaterItems } from "@/lib/answer-format"
 
 interface FieldStatsProps {
   fields: FieldConfig[]
@@ -86,7 +87,60 @@ function FieldStatCard({ field, responses }: { field: FieldConfig; responses: Fo
     return <SignatureStatCard field={field} responses={responses} total={total} />
   }
 
+  if (field.type === "repeater") {
+    return <RepeaterStatCards field={field} responses={responses} />
+  }
+
   return null
+}
+
+// ─── Repeater: item totals + per-sub-field stats across all items ───────────
+
+const REPEATER_STAT_SUB_TYPES = new Set(["dropdown", "radio", "multiselect", "checkbox", "number"])
+
+function RepeaterStatCards({ field, responses }: { field: FieldConfig; responses: FormResponse[] }) {
+  // Each item becomes its own pseudo-response so the regular cards can be reused
+  const itemResponses: FormResponse[] = responses.flatMap((r) =>
+    repeaterItems(r.data[field.id]).map((item, i) => ({
+      id: `${r.id}-${i}`,
+      form_id: r.form_id,
+      data: item,
+      submitted_at: r.submitted_at,
+    }))
+  )
+  const withItems = responses.filter((r) => repeaterItems(r.data[field.id]).length > 0).length
+  const avg = withItems > 0 ? itemResponses.length / withItems : 0
+  const statSubs = (field.sub_fields ?? []).filter((sf) => REPEATER_STAT_SUB_TYPES.has(sf.type))
+  const groupLabel = field.label || "קבוצה חוזרת"
+
+  return (
+    <>
+      <StatCardShell label={groupLabel}>
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div>
+            <p className="text-2xl font-bold text-neutral-900">{itemResponses.length}</p>
+            <p className="text-xs text-neutral-500">{field.item_label?.trim() ? `סה״כ ${field.item_label.trim()}` : "סה״כ פריטים"}</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-neutral-900">{avg.toFixed(1)}</p>
+            <p className="text-xs text-neutral-500">ממוצע לתגובה</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-neutral-900">{withItems}</p>
+            <p className="text-xs text-neutral-500">תגובות עם פריטים</p>
+          </div>
+        </div>
+      </StatCardShell>
+      {itemResponses.length > 0 &&
+        statSubs.map((sf) => (
+          <FieldStatCard
+            key={sf.id}
+            field={{ ...sf, label: `${groupLabel} › ${sf.label || "שדה"}` }}
+            responses={itemResponses}
+          />
+        ))}
+    </>
+  )
 }
 
 // ─── Card wrapper ────────────────────────────────────────────────────────────
@@ -171,7 +225,7 @@ function OptionDistributionCard({ field, responses, total }: { field: FieldConfi
     const val = r.data[field.id]
     if (!val) return
     if (Array.isArray(val)) {
-      val.forEach((v) => { countMap[v] = (countMap[v] ?? 0) + 1 })
+      val.forEach((v) => { if (typeof v === "string") countMap[v] = (countMap[v] ?? 0) + 1 })
     } else {
       if (val) countMap[val] = (countMap[val] ?? 0) + 1
     }

@@ -19,6 +19,8 @@ import {
   Layers,
   Search,
   Sparkles,
+  Rows3,
+  Plus,
 } from "lucide-react"
 import { isLayoutField, type FieldConfig } from "@/lib/types"
 import { FormStyle, FORM_ROOT_ID } from "@/components/form-renderer/form-style"
@@ -301,10 +303,42 @@ function FieldTypeIcon({ type }: { type: FieldConfig["type"] }) {
   if (type === "link") return <Link2 className={cls} />
   if (type === "dataset_lookup") return <Search className={cls} />
   if (type === "ai_computed") return <Sparkles className={cls} />
+  if (type === "repeater") return <Rows3 className={cls} />
   return null
 }
 
 function FieldMock({ field }: { field: FieldConfig }) {
+  if (field.type === "repeater") {
+    const noun = field.item_label?.trim() || "פריט"
+    return (
+      <div className="space-y-2">
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 overflow-hidden">
+          <div className="px-3 py-2 border-b border-neutral-200 bg-white text-xs font-semibold text-neutral-600">
+            {noun} 1
+          </div>
+          <div className="p-3 space-y-3">
+            {(field.sub_fields ?? []).length === 0 ? (
+              <p className="text-xs text-neutral-300 italic">אין שדות בקבוצה</p>
+            ) : (
+              (field.sub_fields ?? []).map((sf) => (
+                <div key={sf.id} className="space-y-1">
+                  <p className="text-xs font-medium text-neutral-700">
+                    {sf.label || <span className="text-neutral-300 italic">תווית השדה</span>}
+                    {sf.required && <span className="text-red-400 ms-1">*</span>}
+                  </p>
+                  <FieldMock field={sf} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-neutral-300 py-2 text-xs text-neutral-500">
+          <Plus className="h-3.5 w-3.5" />
+          {field.add_button_label?.trim() || `הוסף ${noun}`}
+        </div>
+      </div>
+    )
+  }
   if (field.type === "text") {
     const vtype = field.validation?.type
     const vLabel = vtype && vtype !== "none"

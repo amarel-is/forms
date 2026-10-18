@@ -5,11 +5,13 @@ import type {
   ConditionOperator,
   InputFieldType,
   FormDataset,
+  AnswerData,
 } from "./types"
+import { isRepeaterValue } from "./types"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FormValues = Record<string, string | string[]>
+type FormValues = AnswerData
 
 // ─── Operator metadata ────────────────────────────────────────────────────────
 
@@ -85,7 +87,9 @@ function resolveRuleValue(
   allFields?: FieldConfig[],
   datasets?: FormDataset[]
 ): string | string[] | undefined {
-  const rawVal = values[rule.fieldId]
+  const stored = values[rule.fieldId]
+  // Repeater groups aren't condition sources; treat their value as absent
+  const rawVal = isRepeaterValue(stored) ? undefined : stored
   if (!rule.dataset_column || !allFields || !datasets) return rawVal
 
   const sourceField = allFields.find((f) => f.id === rule.fieldId)
@@ -194,7 +198,8 @@ export function getConditionSources(
       f.type !== "divider" &&
       f.type !== "image" &&
       f.type !== "link" &&
-      f.type !== "section"
+      f.type !== "section" &&
+      f.type !== "repeater"
   )
 }
 

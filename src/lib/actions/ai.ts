@@ -40,6 +40,7 @@ const FIELD_TYPES = [
   "entry_exit",
   "location",
   "signature",
+  "repeater",
   // Layout / display fields
   "heading",
   "subheading",
@@ -84,6 +85,37 @@ const AIConditionsSchema = z.object({
   rules: z.array(AIConditionRuleSchema),
 })
 
+const REPEATER_SUB_TYPES = [
+  "text",
+  "long_answer",
+  "number",
+  "date",
+  "dropdown",
+  "radio",
+  "multiselect",
+  "checkbox",
+] as const
+
+// Sub-field inside a repeater group (one level only — no nesting)
+const AISubFieldSchema = z.object({
+  key: z.string().describe("lowercase_snake_case key, unique within the group"),
+  type: z.enum(REPEATER_SUB_TYPES),
+  label: z.string(),
+  required: z.boolean(),
+  placeholder: z.string().nullable(),
+  options: z.array(z.string()).nullable(),
+  allow_other: z.boolean().nullable(),
+  validation_type: z.enum(VALIDATION_TYPES).nullable(),
+  min: z.number().nullable(),
+  max: z.number().nullable(),
+  date_mode: z.enum(["date", "datetime"]).nullable(),
+  data_source_dataset_key: z.string().nullable(),
+  data_source_label_column_key: z.string().nullable(),
+  data_source_value_column_key: z.string().nullable(),
+})
+
+type AISubField = z.infer<typeof AISubFieldSchema>
+
 const AIFieldSchema = z.object({
   key: z.string().describe("stable lowercase_snake_case English key for references"),
   type: z.enum(FIELD_TYPES),
@@ -121,6 +153,13 @@ const AIFieldSchema = z.object({
     .nullable(),
   show_to_approver: z.boolean().nullable(),
   conditions: AIConditionsSchema.nullable(),
+  // repeater only
+  sub_fields: z.array(AISubFieldSchema).nullable().describe("repeater: the fields filled once per item"),
+  item_label: z.string().nullable().describe("repeater: Hebrew noun for one item, e.g. עובד"),
+  add_button_label: z.string().nullable(),
+  min_items: z.number().nullable(),
+  max_items: z.number().nullable(),
+  item_title_sub_key: z.string().nullable().describe("repeater: key of the sub-field shown as each item's title"),
 })
 
 type AIField = z.infer<typeof AIFieldSchema>
@@ -251,6 +290,7 @@ Input fields:
 - entry_exit: כניסה/יציאה toggle (attendance)
 - location: GPS capture
 - signature: signature canvas
+- repeater: a repeating group ("קבוצה חוזרת") — the respondent fills the same set of sub_fields once per item and can add as many items as needed. Use it whenever the form asks for the same details "for each employee / item / participant / child / vehicle" (e.g. a team lead requesting equipment for several employees in ONE submission) instead of making people submit the form repeatedly or adding numbered copies of fields. Set sub_fields (types: text, long_answer, number, date, dropdown, radio, multiselect, checkbox — dropdown/radio/multiselect may be dataset-bound), item_label (Hebrew noun, e.g. "עובד"), item_title_sub_key (usually the name sub-field), optionally min_items / max_items / add_button_label. A repeater cannot be used as a condition source, submission-limit field or redirect param. For every non-repeater field set sub_fields, item_label, add_button_label, min_items, max_items, item_title_sub_key to null.
 - dataset_lookup: display-only field auto-filled from a dataset row when a dataset-bound field is selected; set lookup_field_key (the source dropdown), lookup_dataset_key, lookup_column_key
 - ai_computed: display-only field whose value comes from an AI prompt with {{field label}} placeholders; set prompt_template and optionally ai_model
 
@@ -318,6 +358,7 @@ In this one-shot schema: redirect_params use field_key; thank_you_recaps use sou
 
 DESIGN GUIDELINES
 - Long forms → break with section + subheading + paragraph (info) for instructions.
+- Same details repeated per person/item → one repeater field, not duplicated fields.
 - Put a welcoming paragraph at the top if the form is public-facing.
 - Pick required=true only for truly needed fields.
 - Hebrew submit_label (e.g., "שלח טופס", "שלח דיווח").
@@ -376,6 +417,71 @@ function buildDatasets(aiDatasets: AIDataset[] | null | undefined, maps: KeyMaps
     datasets.push({ id: dsId, name: ds.name, columns, rows })
   }
   return datasets
+}
+
+function resolveDataSource(
+  dsKey: string | null,
+  labelKey: string | null,
+  valueKey: string | null,
+  maps: KeyMaps
+): FieldConfig["data_source"] | undefined {
+  if (!dsKey || !labelKey || !valueKey) return undefined
+  const dsId = maps.datasetKeyToId.get(dsKey)
+  const colMap = maps.datasetColumnKeyToId.get(dsKey)
+  const labelColId = colMap?.get(labelKey)
+  const valueColId = colMap?.get(valueKey)
+  if (!dsId || !labelColId || !valueColId) return undefined
+  return { dataset_id: dsId, label_column: labelColId, value_column: valueColId }
+}
+
+function buildSubFieldConfig(sf: AISubField, maps: KeyMaps): FieldConfig {
+  const config: FieldConfig = { id: nanoid(), type: sf.type, label: sf.label, required: sf.required }
+  if (sf.placeholder) config.placeholder = sf.placeholder
+  if (sf.options && sf.options.length > 0) config.options = sf.options
+  if (sf.allow_other) config.allow_other = true
+  if (sf.validation_type && sf.validation_type !== "none" && sf.validation_type !== "custom_regex") {
+    config.validation = { type: sf.validation_type }
+  }
+  if (typeof sf.min === "number") config.min = sf.min
+  if (typeof sf.max === "number") config.max = sf.max
+  if (sf.date_mode) config.date_mode = sf.date_mode
+  const ds = resolveDataSource(
+    sf.data_source_dataset_key,
+    sf.data_source_label_column_key,
+    sf.data_source_value_column_key,
+    maps
+  )
+  if (ds) config.data_source = ds
+  return config
+}
+
+/** Repeater props from AI output; sub-field keys resolve item_title_sub_key */
+function applyRepeaterProps(
+  config: FieldConfig,
+  src: Pick<AIField, "sub_fields" | "item_label" | "add_button_label" | "min_items" | "max_items" | "item_title_sub_key">,
+  maps: KeyMaps
+) {
+  if (src.sub_fields) {
+    // Keys matching an existing sub-field id keep that id (and its other
+    // settings), so answers already stored under it stay attached.
+    const existing = new Map((config.sub_fields ?? []).map((s) => [s.id, s]))
+    const subKeyToId = new Map<string, string>()
+    config.sub_fields = src.sub_fields.map((sf) => {
+      const prev = existing.get(sf.key)
+      const fresh = buildSubFieldConfig(sf, maps)
+      const built: FieldConfig = prev ? { ...prev, ...fresh, id: prev.id } : fresh
+      subKeyToId.set(sf.key, built.id)
+      return built
+    })
+    const titleId = src.item_title_sub_key ? subKeyToId.get(src.item_title_sub_key) : undefined
+    config.item_title_field_id = titleId ?? config.sub_fields.find((s) => s.type === "text")?.id
+  } else if (src.item_title_sub_key && config.sub_fields?.some((s) => s.id === src.item_title_sub_key)) {
+    config.item_title_field_id = src.item_title_sub_key
+  }
+  if (src.item_label) config.item_label = src.item_label
+  if (src.add_button_label) config.add_button_label = src.add_button_label
+  if (typeof src.min_items === "number" && src.min_items > 0) config.min_items = Math.floor(src.min_items)
+  if (typeof src.max_items === "number" && src.max_items > 0) config.max_items = Math.floor(src.max_items)
 }
 
 function buildFieldConfig(af: AIField, maps: KeyMaps, allAiFields: AIField[]): FieldConfig {
@@ -464,6 +570,16 @@ function buildFieldConfig(af: AIField, maps: KeyMaps, allAiFields: AIField[]): F
     if (af.ai_model) config.ai_model = af.ai_model
   }
 
+  // repeater
+  if (af.type === "repeater") {
+    applyRepeaterProps(config, af, maps)
+    if (!config.sub_fields || config.sub_fields.length === 0) {
+      config.sub_fields = [{ id: nanoid(), type: "text", label: "שם", required: true }]
+      config.item_title_field_id = config.sub_fields[0].id
+    }
+    delete config.options
+  }
+
   // conditions
   if (af.conditions && af.conditions.rules.length > 0) {
     const rules: FieldCondition["rules"] = []
@@ -501,12 +617,22 @@ function buildFieldsFromAI(aiFields: AIField[], maps: KeyMaps): FieldConfig[] {
   return aiFields.map((af) => buildFieldConfig(af, maps, aiFields))
 }
 
+/** Chat mode: existing datasets are referenced by id, so map id → id */
+function seedDatasetMaps(maps: KeyMaps, datasets: FormDataset[]): KeyMaps {
+  for (const ds of datasets) {
+    maps.datasetKeyToId.set(ds.id, ds.id)
+    maps.datasetColumnKeyToId.set(ds.id, new Map(ds.columns.map((c) => [c.id, c.id])))
+  }
+  return maps
+}
+
 // Legacy helper kept for chat mode (one-field-at-a-time insertion with existing form context)
 function mapAIFieldsToFieldConfig(
   aiFields: AIField[],
-  existingFields: FieldConfig[] = []
+  existingFields: FieldConfig[] = [],
+  datasets: FormDataset[] = []
 ): FieldConfig[] {
-  const maps = emptyMaps()
+  const maps = seedDatasetMaps(emptyMaps(), datasets)
   // Seed with existing form fields so added fields can condition on them (by existing field's id as key)
   for (const f of existingFields) {
     maps.fieldKeyToId.set(f.id, f.id)
@@ -706,6 +832,13 @@ const UpdateFieldParams = z.object({
     date_mode: z.enum(["date", "datetime"]).nullable(),
     content: z.string().nullable(),
     default_value: z.string().nullable(),
+    // repeater only — sub_fields REPLACES the whole list (include the ones to keep)
+    sub_fields: z.array(AISubFieldSchema).nullable(),
+    item_label: z.string().nullable(),
+    add_button_label: z.string().nullable(),
+    min_items: z.number().nullable(),
+    max_items: z.number().nullable(),
+    item_title_sub_key: z.string().nullable(),
   }),
 })
 
@@ -774,6 +907,7 @@ Field-level tools:
 - update_field: Update an existing field's properties (find by label).
 - remove_field: Remove a field (find by label).
 - reorder_field: Move a field.
+- Repeating groups ("קבוצה חוזרת", type "repeater"): when the user wants the same details filled per employee / item / participant in one submission, add ONE repeater field with sub_fields (see the add_fields schema) instead of duplicating fields. To change a repeater's inner fields use update_field with updates.sub_fields = the COMPLETE new list (keep existing ones by repeating them — shown in the context below); item_title_sub_key refers to a sub-field key in that list. Dataset-bound sub-fields use the dataset id and column ids from the context as data_source_*_key. A repeater can't be a condition source, submission-limit field or redirect param.
 
 Form-level tools:
 - update_form_settings: Partial update of form-level settings (form type, submit label, thank-you heading/body, after-submit behaviour, redirect, hide branding, submission limits, submission date window, custom_css, email alerts). Only pass the fields you want to change; leave the rest null. email_alert_enabled + email_alert_recipients: email the owner (or given addresses) on every new submission — only touch this when the user explicitly asks about submission notifications. Submission limiting has two modes via submission_limit_mode: "field" (default — cap per unique value of submission_limit_field_id, e.g. one per ת.ז.) or "device" (one submission per device with NO ID field — use this for live voting / "כל אחד מצביע פעם אחת" without asking for identifying details). For submission_limit_field_id use the exact id of an existing field from the context below.
@@ -801,6 +935,20 @@ function serializeFieldsForContext(fields: FieldConfig[]): string {
       if (f.conditions) desc += " [מותנה]"
       if (f.paragraph_style) desc += ` [סגנון: ${f.paragraph_style}]`
       if (f.data_source?.dataset_id) desc += ` [מבוסס מאגר: ${f.data_source.dataset_id}]`
+      if (f.type === "repeater") {
+        if (f.item_label) desc += ` [פריט: ${f.item_label}]`
+        if (f.min_items) desc += ` [מינימום: ${f.min_items}]`
+        if (f.max_items) desc += ` [מקסימום: ${f.max_items}]`
+        const subs = (f.sub_fields ?? []).map((sf) => {
+          let sd = `   - [${sf.type}] "${sf.label}" (key: ${sf.id})`
+          if (sf.required) sd += " *חובה"
+          if (sf.options?.length) sd += ` (אפשרויות: ${sf.options.join(", ")})`
+          if (sf.data_source?.dataset_id) sd += ` [מבוסס מאגר: ${sf.data_source.dataset_id}]`
+          if (sf.id === f.item_title_field_id) sd += " [כותרת פריט]"
+          return sd
+        })
+        if (subs.length) desc += `\n${subs.join("\n")}`
+      }
       return desc
     })
     .join("\n")
@@ -882,7 +1030,7 @@ function applyToolCalls(
     switch (name) {
       case "add_fields": {
         const parsed = args as z.infer<typeof AddFieldsParams>
-        const newFields = mapAIFieldsToFieldConfig(parsed.fields, result)
+        const newFields = mapAIFieldsToFieldConfig(parsed.fields, result, datasets)
 
         if (parsed.insert_after_label) {
           const idx = result.findIndex((f) => f.label === parsed.insert_after_label)
@@ -930,6 +1078,9 @@ function applyToolCalls(
           if (u.date_mode) field.date_mode = u.date_mode
           if (u.content !== null && u.content !== undefined) field.content = u.content
           if (u.default_value !== null && u.default_value !== undefined) field.default_value = u.default_value
+          if (field.type === "repeater") {
+            applyRepeaterProps(field, u, seedDatasetMaps(emptyMaps(), datasets))
+          }
 
           result[idx] = field
           summary.push(`"${parsed.field_label}" עודכן`)

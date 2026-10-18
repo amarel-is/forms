@@ -29,7 +29,7 @@ function Cell({ value }: { value: string }) {
       </a>
     )
   }
-  return <>{value}</>
+  return <span className="whitespace-pre-line">{value}</span>
 }
 
 export function ShareResultsView({ view }: { view: OkView }) {

@@ -30,6 +30,7 @@ import { VALIDATION_PRESETS } from "@/lib/field-validation"
 import { uploadFormImage } from "@/lib/actions/storage"
 import { ConditionEditor } from "./condition-editor"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { RepeaterEditor } from "./repeater-editor"
 
 const TYPE_LABEL: Record<FieldConfig["type"], string> = {
   text: "תשובה קצרה",
@@ -53,6 +54,7 @@ const TYPE_LABEL: Record<FieldConfig["type"], string> = {
   section: "סקשן",
   dataset_lookup: "תצוגת מאגר",
   ai_computed: "חישוב AI",
+  repeater: "קבוצה חוזרת",
 }
 
 interface FieldEditorPanelProps {
@@ -60,9 +62,11 @@ interface FieldEditorPanelProps {
   onChange: (updated: FieldConfig) => void
   allFields: FieldConfig[]
   datasets?: FormDataset[]
+  /** Editing a sub-field inside a repeater group: no header, no conditions */
+  isSubField?: boolean
 }
 
-export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: FieldEditorPanelProps) {
+export function FieldEditorPanel({ field, onChange, allFields, datasets = [], isSubField = false }: FieldEditorPanelProps) {
   const [newOption, setNewOption] = useState("")
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -170,11 +174,12 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
   // ── Sections that have a default-value control ────────────────────────────
   const hasDefaultValue =
     !layout &&
-    !["entry_exit", "signature", "star_rating", "location"].includes(field.type)
+    !["entry_exit", "signature", "star_rating", "location", "repeater"].includes(field.type)
 
   return (
     <div className="flex flex-col gap-5">
       {/* Header */}
+      {!isSubField && (<>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-neutral-700">הגדרות שדה</h3>
         <Badge
@@ -190,6 +195,7 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
       </div>
 
       <Separator />
+      </>)}
 
       {/* ── Layout field editors ─────────────────────────────────────── */}
 
@@ -756,11 +762,30 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
               placeholder={
                 field.type === "checkbox"
                   ? "לדוגמה: אני מסכים לתנאי השימוש"
+                  : field.type === "repeater"
+                  ? "לדוגמה: פרטי העובדים"
                   : "לדוגמה: מה שמך?"
               }
               className="h-9 rounded-xl text-sm"
             />
           </div>
+
+          {field.type === "repeater" && (
+            <RepeaterEditor
+              field={field}
+              update={update}
+              renderSubEditor={(sub, onSubChange) => (
+                <FieldEditorPanel
+                  key={sub.id}
+                  field={sub}
+                  onChange={onSubChange}
+                  allFields={[]}
+                  datasets={datasets}
+                  isSubField
+                />
+              )}
+            />
+          )}
 
           {/* Placeholder — text, long_answer, number */}
           {(field.type === "text" || field.type === "long_answer" || field.type === "number") && (
@@ -1320,6 +1345,8 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
               <p className="text-xs text-neutral-400">
                 {field.type === "checkbox"
                   ? "המשיב חייב לסמן את התיבה"
+                  : field.type === "repeater"
+                  ? "המשיבים חייבים למלא לפחות פריט אחד"
                   : "המשיבים חייבים לענות על שדה זה"}
               </p>
             </div>
@@ -1330,15 +1357,19 @@ export function FieldEditorPanel({ field, onChange, allFields, datasets = [] }: 
             />
           </div>
 
-          <Separator />
+          {!isSubField && (
+            <>
+              <Separator />
 
-          {/* Conditional logic */}
-          <ConditionEditor
-            field={field}
-            allFields={allFields}
-            onChange={(conditions) => update({ conditions })}
-            datasets={datasets}
-          />
+              {/* Conditional logic */}
+              <ConditionEditor
+                field={field}
+                allFields={allFields}
+                onChange={(conditions) => update({ conditions })}
+                datasets={datasets}
+              />
+            </>
+          )}
         </>
       )}
     </div>

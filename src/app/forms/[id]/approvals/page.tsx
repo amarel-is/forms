@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AppHeader } from "@/components/layout/amarel-nav"
 import { CopyLinkButton } from "@/components/results/copy-link-button"
+import { RepeaterTable } from "@/components/results/repeater-table"
+import { formatAnswerText } from "@/lib/answer-format"
 import { createClient } from "@/lib/supabase/server"
 import { getAuthContext } from "@/lib/supabase/auth-context"
 import { getResponseApprovalsByForm } from "@/lib/actions/approvals"
@@ -30,8 +32,7 @@ import {
   isLayoutField,
   type ResponseApproval,
   type ApprovalStatus,
-  type ApprovalStepStatus,
-} from "@/lib/types"
+  type ApprovalStepStatus, type AnswerData } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -98,7 +99,7 @@ export default async function ApprovalsPage({ params, searchParams }: Props) {
   type EnrichedResponse = {
     id: string
     submitted_at: string
-    data: Record<string, string | string[]>
+    data: AnswerData
     approval: ResponseApproval | null
   }
 
@@ -248,7 +249,7 @@ export default async function ApprovalsPage({ params, searchParams }: Props) {
                           return (
                             <span key={f.id} className="truncate max-w-[140px]">
                               <span className="text-neutral-400">{f.label}: </span>
-                              {Array.isArray(val) ? val.join(", ") : val}
+                              {formatAnswerText(f, val, "; ")}
                             </span>
                           )
                         })}
@@ -342,11 +343,19 @@ export default async function ApprovalsPage({ params, searchParams }: Props) {
                         {inputFields.map((f) => {
                           const val = item.data[f.id]
                           if (val === undefined) return null
+                          if (f.type === "repeater") {
+                            return (
+                              <div key={f.id} className="sm:col-span-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                                <p className="text-[11px] text-neutral-500 mb-1.5">{f.label || f.id}</p>
+                                <RepeaterTable field={f} value={val} />
+                              </div>
+                            )
+                          }
                           return (
                             <div key={f.id} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
                               <p className="text-[11px] text-neutral-500 mb-0.5">{f.label || f.id}</p>
                               <p className="text-sm text-neutral-800 break-words">
-                                {Array.isArray(val) ? val.join(", ") : val || "—"}
+                                {formatAnswerText(f, val) || "—"}
                               </p>
                             </div>
                           )

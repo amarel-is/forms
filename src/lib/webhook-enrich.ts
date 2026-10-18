@@ -3,8 +3,8 @@ import {
   type FieldConfig,
   type FormDataset,
   type FormSchema,
-  type FormSettings,
-} from "@/lib/types"
+  type FormSettings, type AnswerData } from "@/lib/types"
+import { formatAnswerText, repeaterToLabeled } from "@/lib/answer-format"
 
 // ─── Webhook payload enrichment ────────────────────────────────────────────────
 // The raw `response_data` is keyed by field ID, and dataset-backed selections
@@ -12,6 +12,8 @@ import {
 // objects so external consumers (e.g. Make.com → email) get everything they
 // need without doing their own field-ID or dataset lookups:
 //   • answers  — every answered field, keyed by its (Hebrew) label
+//   • items    — per repeater group (by label): its items as label-keyed objects,
+//                so Make.com can iterate them
 //   • resolved — per thank-you recap block: the dataset row columns (incl. links),
 //                keyed by column name. Block id is the key (e.g. recap_isuf_link).
 
@@ -39,9 +41,10 @@ function rowMatchesSelection(
 
 export function buildWebhookEnrichment(
   form: { fields?: FieldConfig[]; settings?: FormSettings; schema?: FormSchema },
-  responseData: Record<string, string | string[]>
+  responseData: AnswerData
 ): {
   answers: Record<string, string>
+  items: Record<string, Array<Record<string, string>>>
   resolved: Record<string, Record<string, string>>
 } {
   const fields = form.fields ?? []
@@ -50,11 +53,13 @@ export function buildWebhookEnrichment(
 
   // 1. answers — by field label
   const answers: Record<string, string> = {}
+  const items: Record<string, Array<Record<string, string>>> = {}
   for (const f of fields) {
     if (isLayoutField(f.type) || !f.label) continue
     const raw = responseData[f.id]
     if (raw === undefined || raw === null) continue
-    answers[f.label] = Array.isArray(raw) ? raw.join(", ") : String(raw)
+    answers[f.label] = formatAnswerText(f, raw, "\n")
+    if (f.type === "repeater") items[f.label] = repeaterToLabeled(f, raw)
   }
 
   // 2. resolved — dataset rows behind each recap block (links etc.)
@@ -67,7 +72,7 @@ export function buildWebhookEnrichment(
 
     const raw = responseData[block.source_field_id]
     const selection = Array.isArray(raw) ? raw[0] : raw
-    if (!selection) continue
+    if (!selection || typeof selection !== "string") continue
 
     const row = rowMatchesSelection(ds, String(selection), field.data_source?.label_column)
     if (!row) continue
@@ -95,5 +100,5 @@ export function buildWebhookEnrichment(
     resolved[block.id] = out
   }
 
-  return { answers, resolved }
+  return { answers, items, resolved }
 }

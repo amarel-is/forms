@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { fireWebhooks } from "@/lib/actions/webhooks"
-import type { FieldConfig, FormSettings, ResponseApproval } from "@/lib/types"
+import type { FieldConfig, FormSettings, ResponseApproval, AnswerData } from "@/lib/types"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://forms-cyan-theta.vercel.app/"
 
@@ -14,7 +14,7 @@ export type ApprovalTokenView = {
   form_fields: FieldConfig[]
   form_settings: FormSettings
   response_id: string
-  response_data: Record<string, string | string[]>
+  response_data: AnswerData
   step_index: number
   total_steps: number
   approver_name: string
@@ -66,7 +66,7 @@ export async function initializeApprovalForResponse(responseId: string): Promise
           approver_name: ctx.next_approver_name ?? "",
           approver_channel: ctx.next_approver_channel ?? "email",
           approver_target: ctx.next_approver_target ?? "",
-          response_data: (ctx.response_data ?? {}) as Record<string, string | string[]>,
+          response_data: (ctx.response_data ?? {}) as AnswerData,
         })
       }
     } catch {
@@ -101,7 +101,7 @@ export async function getApprovalByToken(token: string): Promise<{
       ...raw,
       form_fields: (raw.form_fields ?? []) as FieldConfig[],
       form_settings: (raw.form_settings ?? {}) as FormSettings,
-      response_data: (raw.response_data ?? {}) as Record<string, string | string[]>,
+      response_data: (raw.response_data ?? {}) as AnswerData,
     } as ApprovalTokenView,
   }
 }
@@ -153,7 +153,7 @@ export async function decideApprovalByToken(params: {
           approver_name: ctx.next_approver_name,
           approver_channel: ctx.next_approver_channel ?? "email",
           approver_target: ctx.next_approver_target ?? "",
-          response_data: (ctx.response_data ?? {}) as Record<string, string | string[]>,
+          response_data: (ctx.response_data ?? {}) as AnswerData,
         })
       }
 

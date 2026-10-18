@@ -14,6 +14,25 @@ export type InputFieldType =
   | "entry_exit"
   | "location"
   | "signature"
+  | "repeater"
+
+/** Sub-field types allowed inside a repeater group */
+export const REPEATER_SUB_FIELD_TYPES = [
+  "text",
+  "long_answer",
+  "number",
+  "date",
+  "dropdown",
+  "radio",
+  "multiselect",
+  "checkbox",
+] as const satisfies readonly InputFieldType[]
+
+export type RepeaterSubFieldType = (typeof REPEATER_SUB_FIELD_TYPES)[number]
+
+export function isRepeaterSubFieldType(type: FieldType): type is RepeaterSubFieldType {
+  return (REPEATER_SUB_FIELD_TYPES as readonly string[]).includes(type)
+}
 
 /** Layout/visual fields — display only, no answer collected */
 export type LayoutFieldType = "heading" | "subheading" | "paragraph" | "divider" | "image" | "link" | "section" | "dataset_lookup" | "ai_computed"
@@ -114,6 +133,27 @@ export interface FieldConfig {
   lookup_column_id?: string    // dataset_lookup: which column value to display
   prompt_template?: string     // ai_computed: prompt with {{field label}} placeholders
   ai_model?: string            // ai_computed: model to use (default: gpt-5-mini)
+  // ─── repeater (קבוצה חוזרת) ───
+  sub_fields?: FieldConfig[]   // repeater: fields filled once per item (types from REPEATER_SUB_FIELD_TYPES)
+  min_items?: number           // repeater: minimum items (default 1)
+  max_items?: number           // repeater: maximum items (unset = unlimited)
+  item_label?: string          // repeater: what one item is called, e.g. "עובד"
+  add_button_label?: string    // repeater: add-button text (default "הוסף <item_label>")
+  item_title_field_id?: string // repeater: sub-field whose value titles each item card
+}
+
+// ─── Answer values ────────────────────────────────────────────────────────────
+
+/** One filled item of a repeater group, keyed by sub-field id */
+export type RepeaterItem = Record<string, string | string[]>
+
+/** A single answer: scalar, multi-choice array, or repeater items */
+export type AnswerValue = string | string[] | RepeaterItem[]
+
+export type AnswerData = Record<string, AnswerValue>
+
+export function isRepeaterValue(v: AnswerValue | undefined): v is RepeaterItem[] {
+  return Array.isArray(v) && v.some((x) => typeof x === "object" && x !== null)
 }
 
 // ─── Form types ───────────────────────────────────────────────────────────────
@@ -268,18 +308,18 @@ export function rowToShareLink(row: any): ResultShareLink {
 
 /** True when the response's value for the link's filter field is one of its values. */
 export function responseMatchesShareLink(
-  data: Record<string, string | string[]>,
+  data: AnswerData,
   link: Pick<ResultShareLink, "filter_field_id" | "filter_values">
 ): boolean {
   const v = data[link.filter_field_id]
-  if (Array.isArray(v)) return v.some((x) => link.filter_values.includes(x))
+  if (Array.isArray(v)) return v.some((x) => typeof x === "string" && link.filter_values.includes(x))
   return typeof v === "string" && link.filter_values.includes(v)
 }
 
 export interface FormResponse {
   id: string
   form_id: string
-  data: Record<string, string | string[]>
+  data: AnswerData
   submitted_at: string
   approval?: ResponseApproval | null
 }
@@ -446,7 +486,7 @@ export function rowToResponse(row: any): FormResponse {
   return {
     id: row.id,
     form_id: row.form_id,
-    data: (row.data as unknown as Record<string, string | string[]>) ?? {},
+    data: (row.data as unknown as AnswerData) ?? {},
     submitted_at: row.submitted_at,
   }
 }

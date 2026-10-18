@@ -13,13 +13,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { isLayoutField, type FieldConfig } from "@/lib/types"
+import { isLayoutField, type FieldConfig, type AnswerData, type AnswerValue } from "@/lib/types"
+import { formatAnswerText } from "@/lib/answer-format"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface FormMemory {
   savedFieldIds: string[]
-  values: Record<string, string | string[]>
+  values: AnswerData
 }
 
 // Field types that are meaningful to remember
@@ -46,8 +47,8 @@ function readMemory(formId: string): FormMemory | null {
   }
 }
 
-function formatPreview(val: string | string[]): string {
-  if (Array.isArray(val)) return val.join(", ")
+function formatPreview(val: AnswerValue): string {
+  if (Array.isArray(val)) return formatAnswerText(undefined, val)
   return val === "true" ? "✓ מסומן" : val
 }
 
@@ -58,7 +59,7 @@ interface RememberDialogProps {
   onClose: () => void
   formId: string
   fields: FieldConfig[]
-  currentValues: Record<string, string | string[]>
+  currentValues: AnswerData
 }
 
 export function RememberDialog({

@@ -26,12 +26,19 @@ import {
   SectionElement,
 } from "./fields/layout-elements"
 import { SignatureField } from "./fields/signature-field"
+import {
+  RepeaterField,
+  initialRepeaterItems,
+  isRepeaterItemEmpty,
+  repeaterErrorKey,
+} from "./fields/repeater-field"
+import { formatAnswerText, repeaterItems } from "@/lib/answer-format"
 import { RememberDialog, MEMORY_KEY, isSaveableField, type FormMemory } from "./remember-dialog"
 import { submitResponse } from "@/lib/actions/responses"
 import { getDeviceFingerprint, hasVotedLocally, markVotedLocally } from "@/lib/device-id"
 import ReactMarkdown from "react-markdown"
 import { computeAIField } from "@/lib/actions/ai"
-import { isLayoutField, type FieldConfig, type Form, type FormDataset, type ThankYouRecapBlock, type DatasetColumn, type DatasetRow } from "@/lib/types"
+import { isLayoutField, type FieldConfig, type Form, type FormDataset, type ThankYouRecapBlock, type DatasetColumn, type DatasetRow, type AnswerData, type AnswerValue, type RepeaterItem, isRepeaterValue } from "@/lib/types"
 import { validateTextValue } from "@/lib/field-validation"
 import { isFieldVisibleWithSections } from "@/lib/conditions"
 
@@ -39,7 +46,7 @@ interface FormRendererProps {
   form: Form
 }
 
-type FormValues = Record<string, string | string[]>
+type FormValues = AnswerData
 type FormErrors = Record<string, string>
 
 // ─── Read saved memory from localStorage (safe for SSR) ───────────────────────
@@ -66,13 +73,13 @@ function hasActiveMemory(formId: string): boolean {
 function interpolateTemplate(
   template: string,
   values: FormValues,
-  fields: FieldConfig[]
+  fields: FieldConfig[],
+  itemSeparator = "; "
 ): string {
   let out = template
   for (const f of fields) {
     if (isLayoutField(f.type) || !f.label) continue
-    const raw = values[f.id]
-    const display = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "")
+    const display = formatAnswerText(f, values[f.id], itemSeparator)
     out = out.replaceAll(`{{${f.label}}}`, display)
   }
   // Drop any leftover unmatched placeholders so users never see raw {{...}}.
@@ -101,7 +108,7 @@ function ThankYouRecap({
   if (!field || !ds || block.column_ids.length === 0) return null
 
   const raw = values[block.source_field_id]
-  const selected = Array.isArray(raw) ? raw : raw ? [String(raw)] : []
+  const selected = isRepeaterValue(raw) ? [] : Array.isArray(raw) ? raw : raw ? [String(raw)] : []
   if (selected.length === 0) return null
 
   const labelCol = field.data_source?.label_column
@@ -214,8 +221,7 @@ function AiComputedElement({
   const fieldValues: Record<string, string> = {}
   for (const f of allFields) {
     if (isLayoutField(f.type)) continue
-    const val = allValues[f.id]
-    fieldValues[f.label] = Array.isArray(val) ? val.join(", ") : String(val ?? "")
+    fieldValues[f.label] = formatAnswerText(f, allValues[f.id], "; ")
   }
 
   async function handleCompute() {
@@ -335,7 +341,9 @@ export function FormRenderer({ form }: FormRendererProps) {
     // 1. Build initial values from field default_value
     const initial: FormValues = {}
     inputFields.forEach((f) => {
-      if (f.default_value !== undefined) {
+      if (f.type === "repeater") {
+        initial[f.id] = initialRepeaterItems(f)
+      } else if (f.default_value !== undefined) {
         if (f.type === "date" && f.default_value === "__now__") {
           const now = new Date()
           const offset = now.getTimezoneOffset() * 60000
@@ -373,7 +381,7 @@ export function FormRenderer({ form }: FormRendererProps) {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
       params.forEach((value, key) => {
-        if (key in initial) {
+        if (key in initial && !isRepeaterValue(initial[key])) {
           initial[key] = value
         }
       })
@@ -387,7 +395,7 @@ export function FormRenderer({ form }: FormRendererProps) {
     const params = new URLSearchParams(window.location.search)
     const ids = new Set<string>()
     params.forEach((_, key) => {
-      if (inputFields.some((f) => f.id === key)) ids.add(key)
+      if (inputFields.some((f) => f.id === key && f.type !== "repeater")) ids.add(key)
     })
     return ids
   }, [inputFields])
@@ -430,14 +438,59 @@ export function FormRenderer({ form }: FormRendererProps) {
   // Only show the remember button if the form has saveable fields
   const hasSaveableFields = form.fields.some(isSaveableField)
 
-  function setValue(fieldId: string, val: string | string[]) {
+  function setValue(fieldId: string, val: AnswerValue, clearedErrorKeys: string[] = [fieldId]) {
     setValues((prev) => ({ ...prev, [fieldId]: val }))
-    if (errors[fieldId]) {
+    if (clearedErrorKeys.some((k) => errors[k])) {
       setErrors((prev) => {
         const next = { ...prev }
-        delete next[fieldId]
+        for (const k of clearedErrorKeys) delete next[k]
         return next
       })
+    }
+  }
+
+  /** Validation for one scalar input value; returns an error message or null */
+  function validateScalar(f: FieldConfig, val: string | string[] | undefined): string | null {
+    if (f.required) {
+      if (f.type === "multiselect") {
+        if (!Array.isArray(val) || val.length === 0) return "אנא בחר לפחות אפשרות אחת"
+      } else if (f.type === "checkbox") {
+        if (val !== "true") return "יש לסמן תיבה זו כדי להמשיך"
+      } else if (typeof val !== "string" || val.trim() === "") {
+        return "שדה זה הוא חובה"
+      }
+    }
+    const str = typeof val === "string" ? val.trim() : ""
+    if (f.type === "number" && str !== "") {
+      const num = Number(str)
+      if (Number.isNaN(num)) return "יש להזין מספר תקין"
+      if (f.min !== undefined && num < f.min) return `הערך המינימלי הוא ${f.min}`
+      if (f.max !== undefined && num > f.max) return `הערך המקסימלי הוא ${f.max}`
+    }
+    if (f.type === "text" && str !== "") {
+      const validationError = validateTextValue(str, f.validation)
+      if (validationError) return validationError
+    }
+    return null
+  }
+
+  /** Repeater validation: fully-empty items are ignored (and dropped on submit) */
+  function validateRepeater(f: FieldConfig, newErrors: FormErrors) {
+    const items = repeaterItems(values[f.id])
+    let filled = 0
+    items.forEach((item, index) => {
+      if (isRepeaterItemEmpty(f, item)) return
+      filled++
+      for (const sf of f.sub_fields ?? []) {
+        const err = validateScalar(sf, item[sf.id])
+        if (err) newErrors[repeaterErrorKey(f.id, index, sf.id)] = err
+      }
+    })
+    const min = f.min_items ?? 0
+    if (f.required && filled === 0) {
+      newErrors[f.id] = "יש למלא לפחות פריט אחד"
+    } else if (min > 1 && filled < min) {
+      newErrors[f.id] = `יש למלא לפחות ${min} פריטים`
     }
   }
 
@@ -446,41 +499,13 @@ export function FormRenderer({ form }: FormRendererProps) {
     inputFields
       .filter((f) => visibleFieldIds.has(f.id))   // skip hidden fields
       .forEach((f) => {
+      if (f.type === "repeater") {
+        validateRepeater(f, newErrors)
+        return
+      }
       const val = values[f.id]
-
-      // Required check
-      if (f.required) {
-        if (f.type === "multiselect") {
-          if ((val as string[]).length === 0)
-            newErrors[f.id] = "אנא בחר לפחות אפשרות אחת"
-        } else if (f.type === "checkbox") {
-          if (val !== "true")
-            newErrors[f.id] = "יש לסמן תיבה זו כדי להמשיך"
-        } else {
-          if (!val || (val as string).trim() === "")
-            newErrors[f.id] = "שדה זה הוא חובה"
-        }
-      }
-
-      // Number range validation
-      if (f.type === "number" && val && (val as string).trim() !== "") {
-        const num = Number(val)
-        if (Number.isNaN(num)) {
-          newErrors[f.id] = "יש להזין מספר תקין"
-        } else if (f.min !== undefined && num < f.min) {
-          newErrors[f.id] = `הערך המינימלי הוא ${f.min}`
-        } else if (f.max !== undefined && num > f.max) {
-          newErrors[f.id] = `הערך המקסימלי הוא ${f.max}`
-        }
-      }
-
-      // Pattern / format validation (text fields only, only if a value exists)
-      if (f.type === "text" && val && (val as string).trim() !== "") {
-        const validationError = validateTextValue(val as string, f.validation)
-        if (validationError) {
-          newErrors[f.id] = validationError
-        }
-      }
+      const err = validateScalar(f, isRepeaterValue(val) ? undefined : val)
+      if (err) newErrors[f.id] = err
     })
     setErrors(newErrors)
 
@@ -500,8 +525,18 @@ export function FormRenderer({ form }: FormRendererProps) {
     setSubmitting(true)
     try {
       // Exclude hidden fields from the submission payload
-      const submittableValues = Object.fromEntries(
-        Object.entries(values).filter(([id]) => visibleFieldIds.has(id))
+      // and drop fully-empty repeater items
+      const submittableValues: FormValues = Object.fromEntries(
+        Object.entries(values)
+          .filter(([id]) => visibleFieldIds.has(id))
+          .map(([id, v]): [string, AnswerValue] =>
+            isRepeaterValue(v)
+              ? [id, v.filter((it: RepeaterItem) => {
+                  const gf = form.fields.find((x) => x.id === id)
+                  return !gf || !isRepeaterItemEmpty(gf, it)
+                })]
+              : [id, v]
+          )
       )
       const deviceId = deviceLimited ? await getDeviceFingerprint() : undefined
       const result = await submitResponse(form.id, submittableValues, deviceId)
@@ -526,8 +561,8 @@ export function FormRenderer({ form }: FormRendererProps) {
             const params = form.settings?.redirect_params
             if (params?.length) {
               for (const p of params) {
-                const val = submittableValues[p.field_id]
-                const str = Array.isArray(val) ? val.join(",") : String(val ?? "")
+                const pf = form.fields.find((x) => x.id === p.field_id)
+                const str = formatAnswerText(pf, submittableValues[p.field_id], ",")
                 if (str) url.searchParams.set(p.param_name, str)
               }
             }
@@ -582,7 +617,7 @@ export function FormRenderer({ form }: FormRendererProps) {
     ).trim() || "תודה!"
 
     const customBody = form.settings?.thank_you_message?.trim()
-      ? interpolateTemplate(form.settings.thank_you_message, values, form.fields).trim()
+      ? interpolateTemplate(form.settings.thank_you_message, values, form.fields, "  \n").trim()
       : ""
 
     return (
@@ -648,9 +683,30 @@ export function FormRenderer({ form }: FormRendererProps) {
               return visibleFieldIds.has(f.id)
             })
             .map((field) => {
+              if (field.type === "repeater") {
+                return (
+                  <div key={field.id} id={`field-${field.id}`} data-field data-field-type={field.type}>
+                    <RepeaterField
+                      field={field}
+                      value={repeaterItems(values[field.id])}
+                      onChange={(items, cleared) => setValue(field.id, items, cleared)}
+                      error={errors[field.id]}
+                      errors={errors}
+                      renderSubField={(sf, v, onSubChange, subError) => (
+                        <FieldRenderer
+                          field={sf}
+                          value={v}
+                          error={subError}
+                          onChange={onSubChange}
+                          datasets={datasets}
+                        />
+                      )}
+                    />
+                  </div>
+                )
+              }
               if (prefillFieldIds.has(field.id)) {
-                const val = values[field.id]
-                const display = Array.isArray(val) ? val.join(", ") : String(val)
+                const display = formatAnswerText(field, values[field.id], ", ")
                 if (!display) return null
                 return (
                   <div key={field.id} id={`field-${field.id}`}
@@ -665,7 +721,7 @@ export function FormRenderer({ form }: FormRendererProps) {
                 <div key={field.id} id={`field-${field.id}`} data-field data-field-type={field.type}>
                   <FieldRenderer
                     field={field}
-                    value={isLayoutField(field.type) ? "" : values[field.id]}
+                    value={isLayoutField(field.type) ? "" : scalarValue(values[field.id])}
                     error={errors[field.id]}
                     onChange={(val) => setValue(field.id, val)}
                     datasets={datasets}
@@ -819,6 +875,11 @@ function DatasetLookupElement({
 }
 
 // ─── Field renderer ───────────────────────────────────────────────────────────
+
+function scalarValue(v: AnswerValue | undefined): string | string[] {
+  if (v === undefined || isRepeaterValue(v)) return ""
+  return v
+}
 
 function FieldRenderer({
   field,

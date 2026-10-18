@@ -300,6 +300,13 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       // Options for select fields
       ...(type === "dropdown" || type === "multiselect" || type === "radio" ? { options: [] } : {}),
     }
+    if (type === "repeater") {
+      const nameId = nanoid()
+      newField.sub_fields = [{ id: nameId, type: "text", label: "שם", required: true, placeholder: "" }]
+      newField.item_label = "פריט"
+      newField.min_items = 1
+      newField.item_title_field_id = nameId
+    }
     setFields((prev) => [...prev, newField])
     selectField(newField.id)
   }
@@ -883,7 +890,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                               <Select value={step.source_field_id ?? ""} onValueChange={(v) => updateApprovalStep(index, { source_field_id: v })}>
                                 <SelectTrigger className="w-full h-8 rounded-lg text-xs"><SelectValue placeholder="בחר שדה מקור" /></SelectTrigger>
                                 <SelectContent>
-                                  {inputFields.map((f) => <SelectItem key={f.id} value={f.id}>{f.label || f.id}</SelectItem>)}
+                                  {inputFields.filter((f) => f.type !== "repeater").map((f) => <SelectItem key={f.id} value={f.id}>{f.label || f.id}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             )}
@@ -1018,7 +1025,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                                   <SelectValue placeholder="בחר שדה" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {fields.filter((f) => !isLayoutField(f.type)).map((f) => (
+                                  {fields.filter((f) => !isLayoutField(f.type) && f.type !== "repeater").map((f) => (
                                     <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1211,7 +1218,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
                           <SelectContent>
                             <SelectItem value="__none__">ללא הגבלה</SelectItem>
                             {fields
-                              .filter((f) => !isLayoutField(f.type))
+                              .filter((f) => !isLayoutField(f.type) && f.type !== "repeater")
                               .map((f) => (
                                 <SelectItem key={f.id} value={f.id}>
                                   {f.label || `שדה (${f.type})`}
