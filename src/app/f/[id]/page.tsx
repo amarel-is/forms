@@ -1,9 +1,11 @@
 import { Metadata } from "next"
+import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 import { FormRenderer } from "@/components/form-renderer/form-renderer"
 import { FormStyle, FORM_ROOT_ID } from "@/components/form-renderer/form-style"
 import { createClient } from "@/lib/supabase/server"
 import { rowToForm } from "@/lib/types"
+import { stripHtml } from "@/lib/text"
 
 export const dynamic = "force-dynamic"
 
@@ -21,9 +23,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .eq("id", id)
     .single()
 
+  const title = row?.name ?? "טופס"
+  const description = row?.description ? stripHtml(row.description).slice(0, 200) : "מלאו את הטופס"
+  // Link previews (WhatsApp etc.) need an absolute image on the host the link
+  // was shared from — the short-link domain doesn't serve app assets.
+  const h = await headers()
+  const host = h.get("x-forwarded-host") ?? h.get("host")
+  const proto = h.get("x-forwarded-proto") ?? "https"
+  const image = {
+    url: host ? `${proto}://${host}/og-image.png` : "/og-image.png",
+    width: 1200,
+    height: 630,
+    alt: "Amarel",
+  }
+
   return {
-    title: row?.name ?? "טופס",
-    description: row?.description ?? undefined,
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      locale: "he_IL",
+      siteName: "מערכת סקרים - אמרל",
+      title,
+      description,
+      images: [image],
+    },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
     viewport: {
       width: "device-width",
       initialScale: 1,

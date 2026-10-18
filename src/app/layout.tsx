@@ -13,8 +13,11 @@ const googleSans = Google_Sans({
 })
 
 export const metadata: Metadata = {
+  // Not forms.amarel.net — that's the Short.io short-link domain and serves no assets
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://forms.amarel.net"
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "https://forms-cyan-theta.vercel.app"
   ),
   title: {
     default: "מערכת סקרים - אמרל",
@@ -31,7 +34,7 @@ export const metadata: Metadata = {
     siteName: "מערכת סקרים - אמרל",
     title: "מערכת סקרים - אמרל",
     description: "מערכת ניהול טפסים וסקרים של אמרל",
-    images: [{ url: "/logos/amarel.png", width: 512, height: 512, alt: "Amarel" }],
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Amarel" }],
   },
   icons: {
     icon: [

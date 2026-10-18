@@ -46,23 +46,12 @@ import { deleteForm, updateForm } from "@/lib/actions/forms"
 import { markAsTemplate, unmarkAsTemplate } from "@/lib/actions/templates"
 import { getResponses } from "@/lib/actions/responses"
 import type { Form, FormResponse } from "@/lib/types"
+import { stripHtml } from "@/lib/text"
 
 interface FormCardProps {
   form: Form
   responseCount: number
   allFolders?: string[]
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, " ")
-    .trim()
 }
 
 export function FormCard({ form, responseCount, allFolders = [] }: FormCardProps) {
