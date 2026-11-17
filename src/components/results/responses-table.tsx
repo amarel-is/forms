@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Trash2, Search, X } from "lucide-react"
+import { Trash2, Search, X, Pencil } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
   Table,
@@ -29,6 +29,7 @@ import type { FieldConfig, FormResponse, ResponseApproval, ApprovalStatus } from
 import { isRepeaterValue } from "@/lib/types"
 import { formatAnswerText } from "@/lib/answer-format"
 import { RepeaterValueCell } from "./repeater-value-cell"
+import { EditResponseDialog } from "./edit-response-dialog"
 
 interface ResponsesTableProps {
   fields: FieldConfig[]
@@ -68,6 +69,8 @@ function getResponseText(response: FormResponse, fields: FieldConfig[]): string 
 export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, showApprovalColumns = false, compact = true, formId, extraKeys = [] }: ResponsesTableProps) {
   const router = useRouter()
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const editingResponse = editingId ? responses.find((r) => r.id === editingId) ?? null : null
   const [isPending, startTransition] = useTransition()
   const [query, setQuery] = useState("")
 
@@ -135,9 +138,13 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-200">
+      <div
+        className={`rounded-xl border border-neutral-200 [&>[data-slot=table-container]]:overflow-visible ${
+          compact ? "max-h-[70vh] overflow-auto" : "overflow-x-auto"
+        }`}
+      >
         <Table>
-          <TableHeader>
+          <TableHeader className={compact ? "sticky top-0 z-10 bg-neutral-50 shadow-[0_1px_0_0_theme(colors.neutral.200)]" : undefined}>
             <TableRow className="bg-neutral-50">
               <TableHead className="text-xs font-semibold text-neutral-500 w-32 text-right">
                 זמן שליחה
@@ -173,7 +180,7 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
                   </span>
                 </TableHead>
               ))}
-              {formId && <TableHead className="w-10" />}
+              {formId && <TableHead className="w-20" />}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -234,14 +241,28 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
                   ))}
                   {formId && (
                     <TableCell className="text-center p-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-opacity"
-                        onClick={() => setPendingDeleteId(response.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center justify-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="עריכת תגובה"
+                          aria-label="עריכת תגובה"
+                          className="h-7 w-7 text-neutral-400 hover:text-orange-600 hover:bg-orange-50"
+                          onClick={() => setEditingId(response.id)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="מחיקת תגובה"
+                          aria-label="מחיקת תגובה"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-opacity"
+                          onClick={() => setPendingDeleteId(response.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -256,6 +277,16 @@ export function ResponsesTable({ fields, responses, approvalsByResponseId = {}, 
         <p className="text-xs text-neutral-400 mt-2 text-right">
           {filtered.length} מתוך {responses.length} תגובות
         </p>
+      )}
+
+      {formId && (
+        <EditResponseDialog
+          response={editingResponse}
+          formId={formId}
+          fields={fields}
+          extraKeys={extraKeys}
+          onClose={() => setEditingId(null)}
+        />
       )}
 
       <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => !open && setPendingDeleteId(null)}>

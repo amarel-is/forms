@@ -128,6 +128,98 @@ export async function deleteAllResponses(
   return { success: true }
 }
 
+// ─── Editing + audit log ──────────────────────────────────────────────────────
+
+export interface ResponseEdit {
+  id: string
+  action: "update" | "delete"
+  source: "dashboard" | "restore" | "api"
+  old_data: AnswerData | null
+  new_data: AnswerData | null
+  changed_keys: string[]
+  edited_by_email: string | null
+  created_at: string
+}
+
+const EDIT_ERRORS: Record<string, string> = {
+  forbidden: "אין לך הרשאה לערוך תגובה זו",
+  not_found: "התגובה לא נמצאה",
+  invalid_patch: "נתונים לא תקינים",
+}
+
+/**
+ * Edit a submission. Goes through the `update_response_data` RPC, which
+ * checks ownership and lets the DB trigger snapshot the previous answers into
+ * `response_edits` — so an edit can always be traced and undone.
+ */
+export async function updateResponse(
+  responseId: string,
+  formId: string,
+  patch: AnswerData,
+  source: "dashboard" | "restore" = "dashboard"
+): Promise<{ success?: boolean; error?: string; data?: AnswerData }> {
+  const { user, isSuperadmin, db } = await getAuthContext()
+  if (!user) return { error: "Unauthorized" }
+  if (Object.keys(patch).length === 0 && source === "dashboard") return { success: true }
+
+  const { data, error } = await db.rpc("update_response_data", {
+    p_response_id: responseId,
+    p_form_id: formId,
+    p_patch: patch,
+    p_source: source,
+    p_editor_id: isSuperadmin ? user.id : null,
+    p_editor_email: isSuperadmin ? (user.email ?? null) : null,
+  })
+
+  if (error) return { error: EDIT_ERRORS[error.message] ?? error.message }
+  return { success: true, data: (data ?? {}) as AnswerData }
+}
+
+export async function getResponseHistory(
+  responseId: string,
+  formId: string
+): Promise<{ edits: ResponseEdit[]; error?: string }> {
+  const { user, isSuperadmin, db } = await getAuthContext()
+  if (!user) return { error: "Unauthorized", edits: [] }
+
+  if (isSuperadmin === false) {
+    const { data: formRow } = await db.from("forms").select("id").eq("id", formId).eq("user_id", user.id).maybeSingle()
+    if (!formRow) return { error: "הטופס לא נמצא", edits: [] }
+  }
+
+  const { data, error } = await db
+    .from("response_edits")
+    .select("id, action, source, old_data, new_data, changed_keys, edited_by_email, created_at")
+    .eq("response_id", responseId)
+    .eq("form_id", formId)
+    .order("created_at", { ascending: false })
+
+  if (error) return { error: error.message, edits: [] }
+  return { edits: (data ?? []) as ResponseEdit[] }
+}
+
+/** Put a submission back to how it was before a given edit. Logged as a new edit. */
+export async function restoreResponseVersion(
+  editId: string,
+  formId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const { user, db } = await getAuthContext()
+  if (!user) return { error: "Unauthorized" }
+
+  const { data: edit, error } = await db
+    .from("response_edits")
+    .select("response_id, old_data, action")
+    .eq("id", editId)
+    .eq("form_id", formId)
+    .maybeSingle()
+
+  if (error) return { error: error.message }
+  if (!edit || edit.action !== "update" || !edit.old_data) return { error: "הגרסה לא נמצאה" }
+
+  const res = await updateResponse(edit.response_id as string, formId, edit.old_data as AnswerData, "restore")
+  return res.error ? { error: res.error } : { success: true }
+}
+
 export async function getResponses(
   formId: string
 ): Promise<{ responses: FormResponse[]; error?: string }> {

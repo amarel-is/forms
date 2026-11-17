@@ -729,3 +729,135 @@ drop policy if exists "result_share_links_delete_owner" on result_share_links;
 create policy "result_share_links_delete_owner" on result_share_links for delete using (
   exists (select 1 from forms where forms.id = result_share_links.form_id and forms.user_id = auth.uid())
 );
+
+-- ─────────────────────────────────────────────
+-- RESPONSE EDITS — audit log for edited / deleted submissions
+-- Every change to responses.data (dashboard edit, restore, external API PATCH)
+-- and every delete is snapshotted here by trigger, so no answer is ever lost.
+-- response_id intentionally has no FK: the log must outlive a deleted response.
+-- ─────────────────────────────────────────────
+create table if not exists response_edits (
+  id               uuid primary key default gen_random_uuid(),
+  response_id      uuid not null,
+  form_id          uuid not null references forms(id) on delete cascade,
+  action           text not null check (action in ('update', 'delete')),
+  source           text not null default 'dashboard' check (source in ('dashboard', 'restore', 'api')),
+  old_data         jsonb,
+  new_data         jsonb,
+  changed_keys     text[] not null default '{}',
+  edited_by        uuid,
+  edited_by_email  text,
+  created_at       timestamptz not null default now()
+);
+
+create index if not exists response_edits_response_idx on response_edits (response_id, created_at desc);
+create index if not exists response_edits_form_idx on response_edits (form_id, created_at desc);
+
+alter table response_edits enable row level security;
+
+drop policy if exists "response_edits_select_owner" on response_edits;
+create policy "response_edits_select_owner" on response_edits for select using (
+  exists (select 1 from forms where forms.id = response_edits.form_id and forms.user_id = auth.uid())
+);
+-- No insert/update/delete policies: rows are written only by the trigger below
+-- and are immutable from the app.
+
+create or replace function log_response_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_editor  uuid := coalesce(nullif(current_setting('app.editor_id', true), '')::uuid, auth.uid());
+  v_email   text := coalesce(nullif(current_setting('app.editor_email', true), ''), auth.jwt() ->> 'email');
+  v_source  text := coalesce(
+                      nullif(current_setting('app.edit_source', true), ''),
+                      case when v_editor is null then 'api' else 'dashboard' end
+                    );
+  v_keys    text[];
+begin
+  if tg_op = 'UPDATE' then
+    if new.data is not distinct from old.data then
+      return new;
+    end if;
+    select coalesce(array_agg(k order by k), '{}') into v_keys
+    from (
+      select key as k from jsonb_each(coalesce(old.data, '{}'::jsonb))
+      union
+      select key from jsonb_each(coalesce(new.data, '{}'::jsonb))
+    ) all_keys
+    where (old.data -> k) is distinct from (new.data -> k);
+
+    insert into response_edits (response_id, form_id, action, source, old_data, new_data, changed_keys, edited_by, edited_by_email)
+    values (old.id, old.form_id, 'update', v_source, old.data, new.data, v_keys, v_editor, v_email);
+    return new;
+  end if;
+
+  -- DELETE: skip when the whole form is being deleted (cascade) — nothing to keep it under.
+  if exists (select 1 from forms where id = old.form_id) then
+    insert into response_edits (response_id, form_id, action, source, old_data, new_data, changed_keys, edited_by, edited_by_email)
+    values (old.id, old.form_id, 'delete', v_source, old.data, null, '{}', v_editor, v_email);
+  end if;
+  return old;
+end;
+$$;
+
+drop trigger if exists on_response_change_audit on responses;
+create trigger on_response_change_audit
+  after update or delete on responses
+  for each row execute function log_response_change();
+
+-- Edit a submission from the dashboard. Merges p_patch into the stored data
+-- (or replaces it entirely when restoring a version), tags the audit row with
+-- the editor, and returns the new data. Owners call it with their own session;
+-- superadmins call it via the service role and pass p_editor_* explicitly.
+create or replace function update_response_data(
+  p_response_id   uuid,
+  p_form_id       uuid,
+  p_patch         jsonb,
+  p_source        text default 'dashboard',
+  p_editor_id     uuid default null,
+  p_editor_email  text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_is_service boolean := coalesce(auth.jwt() ->> 'role', '') = 'service_role';
+  v_editor     uuid := case when v_is_service then p_editor_id else auth.uid() end;
+  v_email      text := case when v_is_service then p_editor_email else auth.jwt() ->> 'email' end;
+  v_data       jsonb;
+begin
+  if p_source not in ('dashboard', 'restore') then
+    raise exception 'invalid_source';
+  end if;
+  if jsonb_typeof(p_patch) is distinct from 'object' then
+    raise exception 'invalid_patch';
+  end if;
+  if not v_is_service and not exists (
+    select 1 from forms where id = p_form_id and user_id = auth.uid()
+  ) then
+    raise exception 'forbidden';
+  end if;
+
+  perform set_config('app.editor_id', coalesce(v_editor::text, ''), true);
+  perform set_config('app.editor_email', coalesce(v_email, ''), true);
+  perform set_config('app.edit_source', p_source, true);
+
+  update responses
+     set data = case when p_source = 'restore' then p_patch else coalesce(data, '{}'::jsonb) || p_patch end
+   where id = p_response_id and form_id = p_form_id
+  returning data into v_data;
+
+  if v_data is null then
+    raise exception 'not_found';
+  end if;
+  return v_data;
+end;
+$$;
+
+revoke all on function update_response_data(uuid, uuid, jsonb, text, uuid, text) from public, anon;
+grant execute on function update_response_data(uuid, uuid, jsonb, text, uuid, text) to authenticated, service_role;
